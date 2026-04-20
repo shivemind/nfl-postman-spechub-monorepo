@@ -250,6 +250,18 @@ jobs:
           env.POSTMAN_ENABLE_INSIGHTS == 'true')) &&
           steps.anchor_env.outputs.environment_uid != ''
         uses: postman-cs/postman-insights-onboarding-action@5387b8431cf548ab2250945e74612c6f0a9ed56e
+        env:
+          # Work around GitHub runner input normalization for this Node action.
+          INPUT_PROJECT_NAME: ${{ steps.anchor.outputs.project_name }}
+          INPUT_WORKSPACE_ID: ${{ steps.anchor_state.outputs.workspace_id }}
+          INPUT_ENVIRONMENT_ID: ${{ steps.anchor_env.outputs.environment_uid }}
+          INPUT_CLUSTER_NAME: ${{ env.POSTMAN_INSIGHTS_CLUSTER_NAME }}
+          INPUT_POSTMAN_ACCESS_TOKEN: ${{ secrets.POSTMAN_ACCESS_TOKEN }}
+          INPUT_POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
+          INPUT_POSTMAN_TEAM_ID: ${{ env.POSTMAN_TEAM_ID }}
+          INPUT_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_POLL_TIMEOUT_SECONDS: ${{ env.POSTMAN_INSIGHTS_POLL_TIMEOUT_SECONDS }}
+          INPUT_POLL_INTERVAL_SECONDS: ${{ env.POSTMAN_INSIGHTS_POLL_INTERVAL_SECONDS }}
         with:
           project-name: ${{ steps.anchor.outputs.project_name }}
           workspace-id: ${{ steps.anchor_state.outputs.workspace_id }}
@@ -504,6 +516,18 @@ jobs:
           env.POSTMAN_ENABLE_INSIGHTS == 'true') &&
           steps.env_uid.outputs.environment_uid != ''
         uses: postman-cs/postman-insights-onboarding-action@5387b8431cf548ab2250945e74612c6f0a9ed56e
+        env:
+          # Work around GitHub runner input normalization for this Node action.
+          INPUT_PROJECT_NAME: ${{ matrix.projectName }}
+          INPUT_WORKSPACE_ID: ${{ needs.anchor-onboarding.outputs.workspace-id }}
+          INPUT_ENVIRONMENT_ID: ${{ steps.env_uid.outputs.environment_uid }}
+          INPUT_CLUSTER_NAME: ${{ env.POSTMAN_INSIGHTS_CLUSTER_NAME }}
+          INPUT_POSTMAN_ACCESS_TOKEN: ${{ secrets.POSTMAN_ACCESS_TOKEN }}
+          INPUT_POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
+          INPUT_POSTMAN_TEAM_ID: ${{ env.POSTMAN_TEAM_ID }}
+          INPUT_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_POLL_TIMEOUT_SECONDS: ${{ env.POSTMAN_INSIGHTS_POLL_TIMEOUT_SECONDS }}
+          INPUT_POLL_INTERVAL_SECONDS: ${{ env.POSTMAN_INSIGHTS_POLL_INTERVAL_SECONDS }}
         with:
           project-name: ${{ matrix.projectName }}
           workspace-id: ${{ needs.anchor-onboarding.outputs.workspace-id }}
