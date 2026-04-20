@@ -1,0 +1,162 @@
+openapi: 3.0.3
+info:
+  title: NFL Identity and Access API
+  version: 1.0.0
+  description: Fictional internal API for workforce identities, group membership, and service account provisioning.
+servers:
+  - url: https://stage-api.nfl.example.com/iam
+    description: Stage
+  - url: https://api.nfl.example.com/iam
+    description: Production
+tags:
+  - name: Identities
+  - name: Groups
+  - name: ServiceAccounts
+security:
+  - bearerAuth: []
+paths:
+  /identities/{identityId}:
+    get:
+      operationId: getIdentity
+      summary: Get directory and access metadata for an identity
+      tags: [Identities]
+      parameters:
+        - $ref: "#/components/parameters/IdentityId"
+      responses:
+        "200":
+          description: Identity detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IdentityRecord"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /groups/{groupId}/members:
+    get:
+      operationId: listGroupMembers
+      summary: List direct members of an access group
+      tags: [Groups]
+      parameters:
+        - $ref: "#/components/parameters/GroupId"
+      responses:
+        "200":
+          description: Group members
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  groupId:
+                    type: string
+                  members:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/GroupMember"
+  /service-accounts:
+    post:
+      operationId: createServiceAccount
+      summary: Provision a service account for an internal platform or integration
+      tags: [ServiceAccounts]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServiceAccountRequest"
+      responses:
+        "201":
+          description: Service account provisioned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceAccountRecord"
+components:
+  parameters:
+    IdentityId:
+      name: identityId
+      in: path
+      required: true
+      schema:
+        type: string
+    GroupId:
+      name: groupId
+      in: path
+      required: true
+      schema:
+        type: string
+  schemas:
+    IdentityRecord:
+      type: object
+      properties:
+        identityId:
+          type: string
+        fullName:
+          type: string
+        email:
+          type: string
+          format: email
+        identityType:
+          type: string
+          enum: [employee, contractor, club-user, vendor]
+        status:
+          type: string
+          enum: [active, suspended, disabled]
+        groups:
+          type: array
+          items:
+            type: string
+    GroupMember:
+      type: object
+      properties:
+        identityId:
+          type: string
+        fullName:
+          type: string
+        role:
+          type: string
+    ServiceAccountRequest:
+      type: object
+      required: [name, ownerTeam, scopes]
+      properties:
+        name:
+          type: string
+        ownerTeam:
+          type: string
+        scopes:
+          type: array
+          items:
+            type: string
+        expiresAt:
+          type: string
+          format: date-time
+    ServiceAccountRecord:
+      allOf:
+        - $ref: "#/components/schemas/ServiceAccountRequest"
+        - type: object
+          properties:
+            clientId:
+              type: string
+            status:
+              type: string
+              enum: [pending, active, revoked]
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        statusCode:
+          type: integer
+  responses:
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

@@ -1,0 +1,153 @@
+openapi: 3.0.3
+info:
+  title: NFL Fan Notifications API
+  version: 1.0.0
+  description: Fictional internal API for campaign setup, audience delivery, and notification tracking.
+servers:
+  - url: https://stage-api.nfl.example.com/notifications
+    description: Stage
+  - url: https://api.nfl.example.com/notifications
+    description: Production
+tags:
+  - name: Campaigns
+  - name: Deliveries
+security:
+  - bearerAuth: []
+paths:
+  /campaigns:
+    post:
+      operationId: createNotificationCampaign
+      summary: Create a notification campaign for a club, league, or event audience
+      tags: [Campaigns]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CampaignRequest"
+      responses:
+        "201":
+          description: Campaign created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CampaignRecord"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+  /campaigns/{campaignId}:
+    get:
+      operationId: getNotificationCampaign
+      summary: Get campaign configuration and delivery summary
+      tags: [Campaigns]
+      parameters:
+        - $ref: "#/components/parameters/CampaignId"
+      responses:
+        "200":
+          description: Campaign detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CampaignRecord"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /deliveries/{deliveryId}:
+    get:
+      operationId: getDeliveryStatus
+      summary: Get delivery status for an individual campaign send
+      tags: [Deliveries]
+      parameters:
+        - $ref: "#/components/parameters/DeliveryId"
+      responses:
+        "200":
+          description: Delivery detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeliveryRecord"
+components:
+  parameters:
+    CampaignId:
+      name: campaignId
+      in: path
+      required: true
+      schema:
+        type: string
+    DeliveryId:
+      name: deliveryId
+      in: path
+      required: true
+      schema:
+        type: string
+  schemas:
+    CampaignRequest:
+      type: object
+      required: [name, channel, audienceType, messageTemplate]
+      properties:
+        name:
+          type: string
+        channel:
+          type: string
+          enum: [push, email, sms, in-app]
+        audienceType:
+          type: string
+          enum: [season-ticket-members, single-game-buyers, app-users, fantasy-users]
+        messageTemplate:
+          type: string
+        scheduledAt:
+          type: string
+          format: date-time
+    CampaignRecord:
+      allOf:
+        - $ref: "#/components/schemas/CampaignRequest"
+        - type: object
+          properties:
+            campaignId:
+              type: string
+            status:
+              type: string
+              enum: [draft, scheduled, sending, completed, cancelled]
+            deliveryCount:
+              type: integer
+    DeliveryRecord:
+      type: object
+      required: [deliveryId, campaignId, status]
+      properties:
+        deliveryId:
+          type: string
+        campaignId:
+          type: string
+        status:
+          type: string
+          enum: [queued, sent, throttled, failed]
+        provider:
+          type: string
+        attemptedAt:
+          type: string
+          format: date-time
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        statusCode:
+          type: integer
+  responses:
+    BadRequest:
+      description: Invalid request payload
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

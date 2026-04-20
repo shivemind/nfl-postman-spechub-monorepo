@@ -1,0 +1,175 @@
+openapi: 3.0.3
+info:
+  title: NFL Roster Management API
+  version: 1.0.0
+  description: Fictional internal API for club rosters, transactions, and player profile lookups.
+servers:
+  - url: https://stage-api.nfl.example.com/rosters
+    description: Stage
+  - url: https://api.nfl.example.com/rosters
+    description: Production
+tags:
+  - name: Rosters
+  - name: Players
+security:
+  - bearerAuth: []
+paths:
+  /clubs/{clubId}/roster:
+    get:
+      operationId: getClubRoster
+      summary: Get the active roster, reserve lists, and practice squad for a club
+      tags: [Rosters]
+      parameters:
+        - $ref: "#/components/parameters/ClubId"
+        - name: season
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Club roster
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  clubId:
+                    type: string
+                  players:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PlayerSummary"
+  /clubs/{clubId}/transactions:
+    post:
+      operationId: createRosterTransaction
+      summary: Record a roster transaction for league review
+      tags: [Rosters]
+      parameters:
+        - $ref: "#/components/parameters/ClubId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RosterTransactionRequest"
+      responses:
+        "201":
+          description: Transaction created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionRecord"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+  /players/{playerId}:
+    get:
+      operationId: getPlayerProfile
+      summary: Get player identity, roster, and eligibility detail
+      tags: [Players]
+      parameters:
+        - $ref: "#/components/parameters/PlayerId"
+      responses:
+        "200":
+          description: Player profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlayerDetail"
+        "404":
+          $ref: "#/components/responses/NotFound"
+components:
+  parameters:
+    ClubId:
+      name: clubId
+      in: path
+      required: true
+      schema:
+        type: string
+    PlayerId:
+      name: playerId
+      in: path
+      required: true
+      schema:
+        type: string
+  schemas:
+    PlayerSummary:
+      type: object
+      required: [playerId, fullName, jerseyNumber, position, rosterStatus]
+      properties:
+        playerId:
+          type: string
+        fullName:
+          type: string
+        jerseyNumber:
+          type: integer
+        position:
+          type: string
+        rosterStatus:
+          type: string
+          enum: [active, reserve, practice-squad, exempt]
+    RosterTransactionRequest:
+      type: object
+      required: [playerId, transactionType, effectiveDate]
+      properties:
+        playerId:
+          type: string
+        transactionType:
+          type: string
+          enum: [sign, waive, elevate, release, injured-reserve, activate]
+        effectiveDate:
+          type: string
+          format: date
+        notes:
+          type: string
+    TransactionRecord:
+      allOf:
+        - $ref: "#/components/schemas/RosterTransactionRequest"
+        - type: object
+          properties:
+            transactionId:
+              type: string
+            approvalStatus:
+              type: string
+              enum: [pending-review, approved, rejected]
+    PlayerDetail:
+      allOf:
+        - $ref: "#/components/schemas/PlayerSummary"
+        - type: object
+          properties:
+            clubId:
+              type: string
+            experienceSeasons:
+              type: integer
+            college:
+              type: string
+            eligibilityFlags:
+              type: array
+              items:
+                type: string
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        statusCode:
+          type: integer
+  responses:
+    BadRequest:
+      description: Invalid request payload
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

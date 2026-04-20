@@ -1,0 +1,158 @@
+openapi: 3.0.3
+info:
+  title: NFL Broadcast Coordination API
+  version: 1.0.0
+  description: Fictional internal API for game windows, feed health, and commercial break planning.
+servers:
+  - url: https://stage-api.nfl.example.com/broadcast
+    description: Stage
+  - url: https://api.nfl.example.com/broadcast
+    description: Production
+tags:
+  - name: Windows
+  - name: Feeds
+  - name: Breaks
+security:
+  - bearerAuth: []
+paths:
+  /games/{gameId}/windows:
+    get:
+      operationId: getBroadcastWindows
+      summary: Get scheduled broadcast windows and rights details for a game
+      tags: [Windows]
+      parameters:
+        - $ref: "#/components/parameters/GameId"
+      responses:
+        "200":
+          description: Broadcast windows
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  gameId:
+                    type: string
+                  windows:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/BroadcastWindow"
+  /feeds/{feedId}/health:
+    get:
+      operationId: getFeedHealth
+      summary: Get the current health of a production or backup feed
+      tags: [Feeds]
+      parameters:
+        - $ref: "#/components/parameters/FeedId"
+      responses:
+        "200":
+          description: Feed health
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeedHealth"
+  /games/{gameId}/ad-breaks:
+    post:
+      operationId: createAdBreakPlan
+      summary: Create or replace an ad break plan for a game broadcast
+      tags: [Breaks]
+      parameters:
+        - $ref: "#/components/parameters/GameId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdBreakPlanRequest"
+      responses:
+        "201":
+          description: Ad break plan created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdBreakPlan"
+components:
+  parameters:
+    GameId:
+      name: gameId
+      in: path
+      required: true
+      schema:
+        type: string
+    FeedId:
+      name: feedId
+      in: path
+      required: true
+      schema:
+        type: string
+  schemas:
+    BroadcastWindow:
+      type: object
+      properties:
+        network:
+          type: string
+        territory:
+          type: string
+        feedType:
+          type: string
+          enum: [primary, backup, iso, archive]
+        startsAt:
+          type: string
+          format: date-time
+        endsAt:
+          type: string
+          format: date-time
+    FeedHealth:
+      type: object
+      properties:
+        feedId:
+          type: string
+        status:
+          type: string
+          enum: [healthy, degraded, failed]
+        bitrateMbps:
+          type: number
+          format: float
+        lastHeartbeatAt:
+          type: string
+          format: date-time
+    AdBreakPlanRequest:
+      type: object
+      required: [breaks]
+      properties:
+        breaks:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdBreak"
+    AdBreak:
+      type: object
+      properties:
+        sequence:
+          type: integer
+        trigger:
+          type: string
+          enum: [quarter-end, timeout, two-minute-warning, halftime, injury]
+        plannedDurationSeconds:
+          type: integer
+    AdBreakPlan:
+      allOf:
+        - $ref: "#/components/schemas/AdBreakPlanRequest"
+        - type: object
+          properties:
+            gameId:
+              type: string
+            version:
+              type: integer
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        statusCode:
+          type: integer
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

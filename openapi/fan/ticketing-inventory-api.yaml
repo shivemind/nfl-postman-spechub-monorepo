@@ -1,0 +1,167 @@
+openapi: 3.0.3
+info:
+  title: NFL Ticketing Inventory API
+  version: 1.0.0
+  description: Fictional internal API for event inventory, seat holds, and order lookup workflows.
+servers:
+  - url: https://stage-api.nfl.example.com/ticketing
+    description: Stage
+  - url: https://api.nfl.example.com/ticketing
+    description: Production
+tags:
+  - name: Inventory
+  - name: Orders
+security:
+  - bearerAuth: []
+paths:
+  /events/{eventId}/inventory:
+    get:
+      operationId: getEventInventory
+      summary: Get sellable, held, and blocked inventory for an event
+      tags: [Inventory]
+      parameters:
+        - $ref: "#/components/parameters/EventId"
+      responses:
+        "200":
+          description: Event inventory snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InventorySnapshot"
+  /events/{eventId}/holds:
+    post:
+      operationId: createSeatHold
+      summary: Place a temporary hold on seats for league, club, or partner use
+      tags: [Inventory]
+      parameters:
+        - $ref: "#/components/parameters/EventId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HoldRequest"
+      responses:
+        "201":
+          description: Hold created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HoldRecord"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+  /orders/{orderId}:
+    get:
+      operationId: getTicketOrder
+      summary: Get ticket order fulfillment state
+      tags: [Orders]
+      parameters:
+        - $ref: "#/components/parameters/OrderId"
+      responses:
+        "200":
+          description: Ticket order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderRecord"
+        "404":
+          $ref: "#/components/responses/NotFound"
+components:
+  parameters:
+    EventId:
+      name: eventId
+      in: path
+      required: true
+      schema:
+        type: string
+    OrderId:
+      name: orderId
+      in: path
+      required: true
+      schema:
+        type: string
+  schemas:
+    InventorySnapshot:
+      type: object
+      required: [eventId, totalSeats, availableSeats, heldSeats]
+      properties:
+        eventId:
+          type: string
+        totalSeats:
+          type: integer
+        availableSeats:
+          type: integer
+        heldSeats:
+          type: integer
+        blockedSeats:
+          type: integer
+    HoldRequest:
+      type: object
+      required: [section, row, quantity, holdReason, expiresAt]
+      properties:
+        section:
+          type: string
+        row:
+          type: string
+        quantity:
+          type: integer
+        holdReason:
+          type: string
+          enum: [league, club, partner, hospitality, compliance]
+        expiresAt:
+          type: string
+          format: date-time
+    HoldRecord:
+      allOf:
+        - $ref: "#/components/schemas/HoldRequest"
+        - type: object
+          properties:
+            holdId:
+              type: string
+            status:
+              type: string
+              enum: [active, expired, released]
+    OrderRecord:
+      type: object
+      required: [orderId, eventId, purchaserType, status]
+      properties:
+        orderId:
+          type: string
+        eventId:
+          type: string
+        purchaserType:
+          type: string
+          enum: [fan, sponsor, league, club]
+        status:
+          type: string
+          enum: [pending, paid, fulfilled, cancelled]
+        deliveryMethod:
+          type: string
+          enum: [mobile, will-call, partner-allocation]
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        statusCode:
+          type: integer
+  responses:
+    BadRequest:
+      description: Invalid request payload
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

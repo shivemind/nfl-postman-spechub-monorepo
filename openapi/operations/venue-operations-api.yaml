@@ -1,0 +1,158 @@
+openapi: 3.0.3
+info:
+  title: NFL Venue Operations API
+  version: 1.0.0
+  description: Fictional internal API for venue gates, parking operations, and security briefing coordination.
+servers:
+  - url: https://stage-api.nfl.example.com/venue-ops
+    description: Stage
+  - url: https://api.nfl.example.com/venue-ops
+    description: Production
+tags:
+  - name: Gates
+  - name: Security
+  - name: Parking
+security:
+  - bearerAuth: []
+paths:
+  /venues/{venueId}/gates:
+    get:
+      operationId: listVenueGates
+      summary: List venue gates and their operational state
+      tags: [Gates]
+      parameters:
+        - $ref: "#/components/parameters/VenueId"
+      responses:
+        "200":
+          description: Venue gates
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  venueId:
+                    type: string
+                  gates:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/GateRecord"
+  /events/{eventId}/security-briefings:
+    get:
+      operationId: getSecurityBriefing
+      summary: Get the latest pre-event security briefing for an event
+      tags: [Security]
+      parameters:
+        - $ref: "#/components/parameters/EventId"
+      responses:
+        "200":
+          description: Security briefing
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SecurityBriefing"
+  /parking/lots/{lotId}/capacity:
+    put:
+      operationId: updateParkingCapacity
+      summary: Update parking lot capacity and current allocation
+      tags: [Parking]
+      parameters:
+        - $ref: "#/components/parameters/LotId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ParkingCapacityRequest"
+      responses:
+        "200":
+          description: Parking capacity updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ParkingCapacity"
+components:
+  parameters:
+    VenueId:
+      name: venueId
+      in: path
+      required: true
+      schema:
+        type: string
+    EventId:
+      name: eventId
+      in: path
+      required: true
+      schema:
+        type: string
+    LotId:
+      name: lotId
+      in: path
+      required: true
+      schema:
+        type: string
+  schemas:
+    GateRecord:
+      type: object
+      required: [gateId, label, status]
+      properties:
+        gateId:
+          type: string
+        label:
+          type: string
+        status:
+          type: string
+          enum: [closed, staffing, open, restricted]
+        ingressType:
+          type: string
+          enum: [general, suite, media, staff, team]
+    SecurityBriefing:
+      type: object
+      properties:
+        eventId:
+          type: string
+        meetingTime:
+          type: string
+          format: date-time
+        commander:
+          type: string
+        threatLevel:
+          type: string
+          enum: [low, elevated, high]
+        notes:
+          type: array
+          items:
+            type: string
+    ParkingCapacityRequest:
+      type: object
+      required: [totalSpots, reservedSpots, availableSpots]
+      properties:
+        totalSpots:
+          type: integer
+        reservedSpots:
+          type: integer
+        availableSpots:
+          type: integer
+    ParkingCapacity:
+      allOf:
+        - $ref: "#/components/schemas/ParkingCapacityRequest"
+        - type: object
+          properties:
+            lotId:
+              type: string
+            updatedAt:
+              type: string
+              format: date-time
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        statusCode:
+          type: integer
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

@@ -1,0 +1,184 @@
+openapi: 3.0.3
+info:
+  title: NFL Content Publishing API
+  version: 1.0.0
+  description: Fictional internal API for editorial stories, media assets, and publish workflows.
+servers:
+  - url: https://stage-api.nfl.example.com/content
+    description: Stage
+  - url: https://api.nfl.example.com/content
+    description: Production
+tags:
+  - name: Stories
+  - name: Assets
+security:
+  - bearerAuth: []
+paths:
+  /stories:
+    post:
+      operationId: createStory
+      summary: Create a new editorial story draft
+      tags: [Stories]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StoryRequest"
+      responses:
+        "201":
+          description: Story created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoryRecord"
+  /stories/{storyId}:
+    get:
+      operationId: getStory
+      summary: Get a story draft or published item
+      tags: [Stories]
+      parameters:
+        - $ref: "#/components/parameters/StoryId"
+      responses:
+        "200":
+          description: Story detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoryRecord"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /stories/{storyId}/publish:
+    post:
+      operationId: publishStory
+      summary: Publish a story to configured destinations
+      tags: [Stories]
+      parameters:
+        - $ref: "#/components/parameters/StoryId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PublishRequest"
+      responses:
+        "202":
+          description: Publish job accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublishJob"
+  /assets/{assetId}:
+    get:
+      operationId: getMediaAsset
+      summary: Get metadata for a media asset referenced by story content
+      tags: [Assets]
+      parameters:
+        - $ref: "#/components/parameters/AssetId"
+      responses:
+        "200":
+          description: Asset detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetRecord"
+components:
+  parameters:
+    StoryId:
+      name: storyId
+      in: path
+      required: true
+      schema:
+        type: string
+    AssetId:
+      name: assetId
+      in: path
+      required: true
+      schema:
+        type: string
+  schemas:
+    StoryRequest:
+      type: object
+      required: [headline, slug, body, author]
+      properties:
+        headline:
+          type: string
+        slug:
+          type: string
+        body:
+          type: string
+        author:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+    StoryRecord:
+      allOf:
+        - $ref: "#/components/schemas/StoryRequest"
+        - type: object
+          properties:
+            storyId:
+              type: string
+            status:
+              type: string
+              enum: [draft, in-review, scheduled, published]
+            primaryAssetId:
+              type: string
+    PublishRequest:
+      type: object
+      required: [destinations]
+      properties:
+        destinations:
+          type: array
+          items:
+            type: string
+            enum: [web, mobile, syndication, club-site]
+        publishAt:
+          type: string
+          format: date-time
+    PublishJob:
+      type: object
+      properties:
+        jobId:
+          type: string
+        storyId:
+          type: string
+        status:
+          type: string
+          enum: [queued, processing, published, failed]
+    AssetRecord:
+      type: object
+      properties:
+        assetId:
+          type: string
+        mediaType:
+          type: string
+          enum: [image, video, audio]
+        title:
+          type: string
+        durationSeconds:
+          type: integer
+        rightsWindow:
+          type: string
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        statusCode:
+          type: integer
+  responses:
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

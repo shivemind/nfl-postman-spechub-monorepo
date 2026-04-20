@@ -1,0 +1,646 @@
+name: NFL Postman Spec Hub Sync
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'openapi/**/*.yaml'
+      - 'openapi/**/*.yml'
+      - 'openapi/**/*.json'
+      - '.github/workflows/nfl-postman-spechub.yml'
+      - 'scripts/postman/**'
+      - 'README.md'
+  workflow_dispatch:
+    inputs:
+      spec_path:
+        description: Optional repo-relative spec path to sync.
+        required: false
+        type: string
+      enable_insights:
+        description: Run Postman Insights onboarding for the selected specs.
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: nfl-postman-spechub-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+env:
+  POSTMAN_ENVIRONMENTS_JSON: ${{ vars.POSTMAN_ENVIRONMENTS_JSON != '' && vars.POSTMAN_ENVIRONMENTS_JSON || '["prod"]' }}
+  POSTMAN_ENV_RUNTIME_URLS_JSON: ${{ vars.POSTMAN_ENV_RUNTIME_URLS_JSON != '' && vars.POSTMAN_ENV_RUNTIME_URLS_JSON || '{}' }}
+  POSTMAN_SYSTEM_ENV_MAP_JSON: ${{ vars.POSTMAN_SYSTEM_ENV_MAP_JSON != '' && vars.POSTMAN_SYSTEM_ENV_MAP_JSON || '{}' }}
+  POSTMAN_GOVERNANCE_MAPPING_JSON: ${{ vars.POSTMAN_GOVERNANCE_MAPPING_JSON != '' && vars.POSTMAN_GOVERNANCE_MAPPING_JSON || '{}' }}
+  POSTMAN_MONITOR_CRON: ${{ vars.POSTMAN_MONITOR_CRON }}
+  POSTMAN_WORKSPACE_ADMIN_USER_IDS: ${{ vars.POSTMAN_WORKSPACE_ADMIN_USER_IDS }}
+  POSTMAN_REQUESTER_EMAIL: ${{ vars.POSTMAN_REQUESTER_EMAIL }}
+  POSTMAN_DOMAIN: ${{ vars.POSTMAN_DOMAIN }}
+  POSTMAN_DOMAIN_CODE: ${{ vars.POSTMAN_DOMAIN_CODE }}
+  POSTMAN_TEAM_ID: ${{ vars.POSTMAN_TEAM_ID }}
+  POSTMAN_WORKSPACE_TEAM_ID: ${{ vars.POSTMAN_WORKSPACE_TEAM_ID }}
+  POSTMAN_SHARED_WORKSPACE_ID: ${{ vars.POSTMAN_SHARED_WORKSPACE_ID }}
+  POSTMAN_ENABLE_INSIGHTS: ${{ vars.POSTMAN_ENABLE_INSIGHTS }}
+  POSTMAN_INSIGHTS_CLUSTER_NAME: ${{ vars.POSTMAN_INSIGHTS_CLUSTER_NAME }}
+  POSTMAN_INSIGHTS_POLL_TIMEOUT_SECONDS: ${{ vars.POSTMAN_INSIGHTS_POLL_TIMEOUT_SECONDS != '' && vars.POSTMAN_INSIGHTS_POLL_TIMEOUT_SECONDS || '10' }}
+  POSTMAN_INSIGHTS_POLL_INTERVAL_SECONDS: ${{ vars.POSTMAN_INSIGHTS_POLL_INTERVAL_SECONDS != '' && vars.POSTMAN_INSIGHTS_POLL_INTERVAL_SECONDS || '2' }}
+
+jobs:
+  resolve-specs:
+    runs-on: ubuntu-latest
+    outputs:
+      has-specs: ${{ steps.resolve.outputs.has_specs }}
+      spec-matrix: ${{ steps.resolve.outputs.spec_matrix }}
+      remaining-spec-matrix: ${{ steps.resolve.outputs.remaining_spec_matrix }}
+      anchor-spec-json: ${{ steps.resolve.outputs.anchor_spec_json }}
+      remaining-spec-count: ${{ steps.resolve.outputs.remaining_spec_count }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: resolve
+        name: Resolve Spec Matrix
+        run: >
+          node scripts/postman/resolve-specs.mjs
+          ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.spec_path != '' && format('--spec-path {0}', github.event.inputs.spec_path) || '' }}
+
+  anchor-onboarding:
+    needs: resolve-specs
+    if: needs.resolve-specs.outputs.has-specs == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      workspace-id: ${{ steps.anchor_state.outputs.workspace_id }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: anchor
+        name: Parse Anchor Spec
+        env:
+          ANCHOR_SPEC_JSON: ${{ needs.resolve-specs.outputs.anchor-spec-json }}
+        run: |
+          node <<'NODE'
+          const spec = JSON.parse(process.env.ANCHOR_SPEC_JSON || '{}');
+          const fs = require('node:fs');
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `spec_path=${spec.specPath || ''}\n`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `project_name=${spec.projectName || ''}\n`);
+          NODE
+
+      - id: existing
+        name: Load Existing Anchor State
+        run: >
+          node scripts/postman/lookup-spec-state.mjs
+          --manifest .postman/spec-hub-manifest.json
+          --spec-path "${{ steps.anchor.outputs.spec_path }}"
+
+      - id: fingerprint
+        name: Compute Anchor Spec Fingerprint
+        run: |
+          spec_sha256="$(shasum -a 256 "${{ steps.anchor.outputs.spec_path }}" | awk '{print $1}')"
+          printf 'spec_sha256=%s\n' "${spec_sha256}" >> "${GITHUB_OUTPUT}"
+
+      - id: anchor_mode
+        name: Decide Anchor Refresh Mode
+        env:
+          CURRENT_SPEC_SHA256: ${{ steps.fingerprint.outputs.spec_sha256 }}
+          EXISTING_SPEC_SHA256: ${{ steps.existing.outputs.spec_sha256 }}
+          WORKSPACE_ID: ${{ steps.existing.outputs.workspace_id || env.POSTMAN_SHARED_WORKSPACE_ID }}
+          SPEC_ID: ${{ steps.existing.outputs.spec_id }}
+          BASELINE_COLLECTION_ID: ${{ steps.existing.outputs.baseline_collection_id }}
+          SMOKE_COLLECTION_ID: ${{ steps.existing.outputs.smoke_collection_id }}
+          CONTRACT_COLLECTION_ID: ${{ steps.existing.outputs.contract_collection_id }}
+          MONITOR_ID: ${{ steps.existing.outputs.monitor_id }}
+          MOCK_URL: ${{ steps.existing.outputs.mock_url }}
+          ENVIRONMENT_UIDS_JSON: ${{ steps.existing.outputs.environment_uids_json }}
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const envUids = JSON.parse(process.env.ENVIRONMENT_UIDS_JSON || '{}');
+          const required = [
+            process.env.WORKSPACE_ID,
+            process.env.SPEC_ID,
+            process.env.BASELINE_COLLECTION_ID,
+            process.env.SMOKE_COLLECTION_ID,
+            process.env.CONTRACT_COLLECTION_ID,
+            process.env.MONITOR_ID,
+            process.env.MOCK_URL
+          ];
+          const hasCompleteState = required.every((value) => String(value || '').trim() !== '') && Object.keys(envUids).length > 0;
+          const reuseExisting =
+            hasCompleteState &&
+            String(process.env.CURRENT_SPEC_SHA256 || '').trim() !== '' &&
+            process.env.CURRENT_SPEC_SHA256 === process.env.EXISTING_SPEC_SHA256;
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `reuse_existing=${reuseExisting ? 'true' : 'false'}\n`);
+          NODE
+
+      - id: spec_url
+        name: Build Anchor Spec URL
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_FALLBACK_TOKEN: ${{ secrets.GH_FALLBACK_TOKEN }}
+          SHIVEMIND_GITHUB_TOKEN: ${{ secrets.SHIVEMIND_GITHUB_TOKEN }}
+        run: >
+          node scripts/postman/build-spec-url.mjs
+          --spec-path "${{ steps.anchor.outputs.spec_path }}"
+
+      - id: onboard
+        name: Seed Shared Workspace with Composite Onboarding
+        if: steps.anchor_mode.outputs.reuse_existing != 'true'
+        uses: postman-cs/postman-api-onboarding-action@91d044e308ba8577e66a73e10acc3f7acf8c6f7e
+        env:
+          POSTMAN_WORKSPACE_TEAM_ID: ${{ env.POSTMAN_WORKSPACE_TEAM_ID }}
+        with:
+          workspace-id: ${{ steps.existing.outputs.workspace_id || env.POSTMAN_SHARED_WORKSPACE_ID }}
+          spec-id: ${{ steps.existing.outputs.spec_id }}
+          baseline-collection-id: ${{ steps.existing.outputs.baseline_collection_id }}
+          smoke-collection-id: ${{ steps.existing.outputs.smoke_collection_id }}
+          contract-collection-id: ${{ steps.existing.outputs.contract_collection_id }}
+          monitor-id: ${{ steps.existing.outputs.monitor_id }}
+          mock-url: ${{ steps.existing.outputs.mock_url }}
+          project-name: ${{ steps.anchor.outputs.project_name }}
+          domain: ${{ env.POSTMAN_DOMAIN }}
+          domain-code: ${{ env.POSTMAN_DOMAIN_CODE }}
+          requester-email: ${{ env.POSTMAN_REQUESTER_EMAIL }}
+          workspace-admin-user-ids: ${{ env.POSTMAN_WORKSPACE_ADMIN_USER_IDS }}
+          spec-url: ${{ steps.spec_url.outputs.spec_url }}
+          spec-path: ${{ steps.anchor.outputs.spec_path }}
+          environments-json: ${{ env.POSTMAN_ENVIRONMENTS_JSON }}
+          system-env-map-json: ${{ env.POSTMAN_SYSTEM_ENV_MAP_JSON }}
+          environment-uids-json: ${{ steps.existing.outputs.environment_uids_json }}
+          governance-mapping-json: ${{ env.POSTMAN_GOVERNANCE_MAPPING_JSON }}
+          env-runtime-urls-json: ${{ env.POSTMAN_ENV_RUNTIME_URLS_JSON }}
+          monitor-cron: ${{ env.POSTMAN_MONITOR_CRON }}
+          generate-ci-workflow: 'false'
+          repo-write-mode: none
+          postman-api-key: ${{ secrets.POSTMAN_API_KEY }}
+          postman-access-token: ${{ secrets.POSTMAN_ACCESS_TOKEN }}
+          postman-team-id: ${{ env.POSTMAN_TEAM_ID }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          gh-fallback-token: ${{ secrets.GH_FALLBACK_TOKEN }}
+          enable-insights: 'false'
+
+      - id: anchor_state
+        name: Resolve Anchor State
+        env:
+          WORKSPACE_ID: ${{ steps.onboard.outputs.workspace-id || steps.existing.outputs.workspace_id || env.POSTMAN_SHARED_WORKSPACE_ID }}
+          SPEC_ID: ${{ steps.onboard.outputs.spec-id || steps.existing.outputs.spec_id }}
+          BASELINE_COLLECTION_ID: ${{ steps.onboard.outputs.collections-json != '' && fromJSON(steps.onboard.outputs.collections-json).baseline || steps.existing.outputs.baseline_collection_id }}
+          SMOKE_COLLECTION_ID: ${{ steps.onboard.outputs.collections-json != '' && fromJSON(steps.onboard.outputs.collections-json).smoke || steps.existing.outputs.smoke_collection_id }}
+          CONTRACT_COLLECTION_ID: ${{ steps.onboard.outputs.collections-json != '' && fromJSON(steps.onboard.outputs.collections-json).contract || steps.existing.outputs.contract_collection_id }}
+          MONITOR_ID: ${{ steps.onboard.outputs.monitor-id || steps.existing.outputs.monitor_id }}
+          MOCK_URL: ${{ steps.onboard.outputs.mock-url || steps.existing.outputs.mock_url }}
+          ENVIRONMENT_UIDS_JSON: ${{ steps.onboard.outputs.environment-uids-json || steps.existing.outputs.environment_uids_json || '{}' }}
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const collections = {
+            baseline: process.env.BASELINE_COLLECTION_ID || '',
+            smoke: process.env.SMOKE_COLLECTION_ID || '',
+            contract: process.env.CONTRACT_COLLECTION_ID || ''
+          };
+          const outputs = {
+            workspace_id: process.env.WORKSPACE_ID || '',
+            spec_id: process.env.SPEC_ID || '',
+            baseline_collection_id: collections.baseline,
+            smoke_collection_id: collections.smoke,
+            contract_collection_id: collections.contract,
+            monitor_id: process.env.MONITOR_ID || '',
+            mock_url: process.env.MOCK_URL || '',
+            environment_uids_json: process.env.ENVIRONMENT_UIDS_JSON || '{}',
+            collections_json: JSON.stringify(collections)
+          };
+
+          for (const [key, value] of Object.entries(outputs)) {
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, `${key}=${value}\n`);
+          }
+          NODE
+
+      - id: anchor_env
+        name: Resolve Anchor Environment UID
+        env:
+          ENV_UIDS_JSON: ${{ steps.anchor_state.outputs.environment_uids_json }}
+        run: |
+          node <<'NODE'
+          const envs = JSON.parse(process.env.ENV_UIDS_JSON || '{}');
+          const selected = envs.prod || envs.stage || envs.staging || Object.values(envs)[0] || '';
+          require('node:fs').appendFileSync(process.env.GITHUB_OUTPUT, `environment_uid=${selected}\n`);
+          NODE
+
+      - name: Run Anchor Smoke Collection
+        if: steps.anchor_env.outputs.environment_uid != '' && env.POSTMAN_ENV_RUNTIME_URLS_JSON != '{}' && env.POSTMAN_ENV_RUNTIME_URLS_JSON != ''
+        uses: postmanlabs/postman-cli-action@v1
+        with:
+          command: >-
+            collection run ${{ steps.anchor_state.outputs.smoke_collection_id }}
+            --environment ${{ steps.anchor_env.outputs.environment_uid }}
+          api-key: ${{ secrets.POSTMAN_API_KEY }}
+
+      - name: Run Anchor Contract Collection
+        if: steps.anchor_env.outputs.environment_uid != '' && env.POSTMAN_ENV_RUNTIME_URLS_JSON != '{}' && env.POSTMAN_ENV_RUNTIME_URLS_JSON != ''
+        uses: postmanlabs/postman-cli-action@v1
+        with:
+          command: >-
+            collection run ${{ steps.anchor_state.outputs.contract_collection_id }}
+            --environment ${{ steps.anchor_env.outputs.environment_uid }}
+          api-key: ${{ secrets.POSTMAN_API_KEY }}
+
+      - name: Anchor Insights Onboarding
+        if: >
+          (((github.event_name == 'workflow_dispatch' && github.event.inputs.enable_insights == 'true') ||
+          env.POSTMAN_ENABLE_INSIGHTS == 'true')) &&
+          steps.anchor_env.outputs.environment_uid != ''
+        uses: postman-cs/postman-insights-onboarding-action@5387b8431cf548ab2250945e74612c6f0a9ed56e
+        with:
+          project-name: ${{ steps.anchor.outputs.project_name }}
+          workspace-id: ${{ steps.anchor_state.outputs.workspace_id }}
+          environment-id: ${{ steps.anchor_env.outputs.environment_uid }}
+          cluster-name: ${{ env.POSTMAN_INSIGHTS_CLUSTER_NAME }}
+          postman-access-token: ${{ secrets.POSTMAN_ACCESS_TOKEN }}
+          postman-api-key: ${{ secrets.POSTMAN_API_KEY }}
+          postman-team-id: ${{ env.POSTMAN_TEAM_ID }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          poll-timeout-seconds: ${{ env.POSTMAN_INSIGHTS_POLL_TIMEOUT_SECONDS }}
+          poll-interval-seconds: ${{ env.POSTMAN_INSIGHTS_POLL_INTERVAL_SECONDS }}
+
+      - id: anchor_export
+        name: Export Anchor Postman Monorepo Artifacts
+        if: steps.anchor_mode.outputs.reuse_existing != 'true'
+        uses: postman-cs/postman-repo-sync-action@98f08e5d3a35ae922bf99aa21d815d64043de6e7
+        with:
+          project-name: ${{ steps.anchor.outputs.project_name }}
+          workspace-id: ${{ steps.anchor_state.outputs.workspace_id }}
+          baseline-collection-id: ${{ steps.anchor_state.outputs.baseline_collection_id }}
+          smoke-collection-id: ${{ steps.anchor_state.outputs.smoke_collection_id }}
+          contract-collection-id: ${{ steps.anchor_state.outputs.contract_collection_id }}
+          monitor-id: ${{ steps.anchor_state.outputs.monitor_id }}
+          mock-url: ${{ steps.anchor_state.outputs.mock_url }}
+          environments-json: ${{ env.POSTMAN_ENVIRONMENTS_JSON }}
+          env-runtime-urls-json: ${{ env.POSTMAN_ENV_RUNTIME_URLS_JSON }}
+          system-env-map-json: ${{ env.POSTMAN_SYSTEM_ENV_MAP_JSON }}
+          environment-uids-json: ${{ steps.anchor_state.outputs.environment_uids_json }}
+          monitor-cron: ${{ env.POSTMAN_MONITOR_CRON }}
+          generate-ci-workflow: 'false'
+          repo-write-mode: none
+          workspace-link-enabled: 'false'
+          artifact-dir: postman/${{ steps.anchor.outputs.project_name }}
+          spec-id: ${{ steps.anchor_state.outputs.spec_id }}
+          spec-path: ${{ steps.anchor.outputs.spec_path }}
+          postman-api-key: ${{ secrets.POSTMAN_API_KEY }}
+          postman-access-token: ${{ secrets.POSTMAN_ACCESS_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          gh-fallback-token: ${{ secrets.GH_FALLBACK_TOKEN }}
+          org-mode: ${{ env.POSTMAN_TEAM_ID != '' && 'true' || 'false' }}
+
+      - name: Persist Anchor State Artifact
+        run: >
+          node scripts/postman/write-spec-state.mjs
+          --output ".postman/state-${{ steps.anchor.outputs.project_name }}.json"
+          --spec-path "${{ steps.anchor.outputs.spec_path }}"
+          --project-name "${{ steps.anchor.outputs.project_name }}"
+          --workspace-id "${{ steps.anchor_state.outputs.workspace_id }}"
+          --spec-id "${{ steps.anchor_state.outputs.spec_id }}"
+          --baseline-collection-id "${{ steps.anchor_state.outputs.baseline_collection_id }}"
+          --smoke-collection-id "${{ steps.anchor_state.outputs.smoke_collection_id }}"
+          --contract-collection-id "${{ steps.anchor_state.outputs.contract_collection_id }}"
+          --monitor-id "${{ steps.anchor_state.outputs.monitor_id }}"
+          --mock-url "${{ steps.anchor_state.outputs.mock_url }}"
+          --environment-uids-json '${{ steps.anchor_state.outputs.environment_uids_json }}'
+
+      - name: Package Anchor Export Artifact
+        run: |
+          mkdir -p .postman/export-bundles
+          tar -C postman -czf ".postman/export-bundles/${{ steps.anchor.outputs.project_name }}.tgz" "${{ steps.anchor.outputs.project_name }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: postman-spec-state-${{ steps.anchor.outputs.project_name }}
+          path: .postman/state-${{ steps.anchor.outputs.project_name }}.json
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: postman-export-bundle-${{ steps.anchor.outputs.project_name }}
+          path: .postman/export-bundles/${{ steps.anchor.outputs.project_name }}.tgz
+
+  sync-remaining-specs:
+    needs:
+      - resolve-specs
+      - anchor-onboarding
+    if: needs.resolve-specs.outputs.remaining-spec-count != '0'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix: ${{ fromJSON(needs.resolve-specs.outputs.remaining-spec-matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: existing
+        name: Load Existing Spec State
+        run: >
+          node scripts/postman/lookup-spec-state.mjs
+          --manifest .postman/spec-hub-manifest.json
+          --spec-path "${{ matrix.specPath }}"
+
+      - id: fingerprint
+        name: Compute Spec Fingerprint
+        run: |
+          spec_sha256="$(shasum -a 256 "${{ matrix.specPath }}" | awk '{print $1}')"
+          printf 'spec_sha256=%s\n' "${spec_sha256}" >> "${GITHUB_OUTPUT}"
+
+      - id: sync_mode
+        name: Decide Spec Refresh Mode
+        env:
+          CURRENT_SPEC_SHA256: ${{ steps.fingerprint.outputs.spec_sha256 }}
+          EXISTING_SPEC_SHA256: ${{ steps.existing.outputs.spec_sha256 }}
+          SPEC_ID: ${{ steps.existing.outputs.spec_id }}
+          BASELINE_COLLECTION_ID: ${{ steps.existing.outputs.baseline_collection_id }}
+          SMOKE_COLLECTION_ID: ${{ steps.existing.outputs.smoke_collection_id }}
+          CONTRACT_COLLECTION_ID: ${{ steps.existing.outputs.contract_collection_id }}
+          MONITOR_ID: ${{ steps.existing.outputs.monitor_id }}
+          MOCK_URL: ${{ steps.existing.outputs.mock_url }}
+          ENVIRONMENT_UIDS_JSON: ${{ steps.existing.outputs.environment_uids_json }}
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const envUids = JSON.parse(process.env.ENVIRONMENT_UIDS_JSON || '{}');
+          const required = [
+            process.env.SPEC_ID,
+            process.env.BASELINE_COLLECTION_ID,
+            process.env.SMOKE_COLLECTION_ID,
+            process.env.CONTRACT_COLLECTION_ID,
+            process.env.MONITOR_ID,
+            process.env.MOCK_URL
+          ];
+          const hasCompleteState = required.every((value) => String(value || '').trim() !== '') && Object.keys(envUids).length > 0;
+          const reuseExisting =
+            hasCompleteState &&
+            String(process.env.CURRENT_SPEC_SHA256 || '').trim() !== '' &&
+            process.env.CURRENT_SPEC_SHA256 === process.env.EXISTING_SPEC_SHA256;
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `reuse_existing=${reuseExisting ? 'true' : 'false'}\n`);
+          NODE
+
+      - id: spec_url
+        name: Build Spec URL
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_FALLBACK_TOKEN: ${{ secrets.GH_FALLBACK_TOKEN }}
+          SHIVEMIND_GITHUB_TOKEN: ${{ secrets.SHIVEMIND_GITHUB_TOKEN }}
+        run: >
+          node scripts/postman/build-spec-url.mjs
+          --spec-path "${{ matrix.specPath }}"
+
+      - id: bootstrap
+        name: Bootstrap Shared Spec Hub Assets
+        if: steps.sync_mode.outputs.reuse_existing != 'true'
+        uses: postman-cs/postman-bootstrap-action@e52530a0e57a5ce12b9a1d97a49621b6573782df
+        with:
+          workspace-id: ${{ needs.anchor-onboarding.outputs.workspace-id }}
+          spec-id: ${{ steps.existing.outputs.spec_id }}
+          baseline-collection-id: ${{ steps.existing.outputs.baseline_collection_id }}
+          smoke-collection-id: ${{ steps.existing.outputs.smoke_collection_id }}
+          contract-collection-id: ${{ steps.existing.outputs.contract_collection_id }}
+          project-name: ${{ matrix.projectName }}
+          domain: ${{ env.POSTMAN_DOMAIN }}
+          domain-code: ${{ env.POSTMAN_DOMAIN_CODE }}
+          requester-email: ${{ env.POSTMAN_REQUESTER_EMAIL }}
+          workspace-admin-user-ids: ${{ env.POSTMAN_WORKSPACE_ADMIN_USER_IDS }}
+          workspace-team-id: ${{ env.POSTMAN_WORKSPACE_TEAM_ID }}
+          spec-url: ${{ steps.spec_url.outputs.spec_url }}
+          governance-mapping-json: ${{ env.POSTMAN_GOVERNANCE_MAPPING_JSON }}
+          postman-api-key: ${{ secrets.POSTMAN_API_KEY }}
+          postman-access-token: ${{ secrets.POSTMAN_ACCESS_TOKEN }}
+
+      - id: repo_sync
+        name: Materialize Environments, Mocks, and Monitors
+        if: steps.sync_mode.outputs.reuse_existing != 'true'
+        uses: postman-cs/postman-repo-sync-action@98f08e5d3a35ae922bf99aa21d815d64043de6e7
+        with:
+          project-name: ${{ matrix.projectName }}
+          workspace-id: ${{ needs.anchor-onboarding.outputs.workspace-id }}
+          baseline-collection-id: ${{ steps.bootstrap.outputs.baseline-collection-id }}
+          smoke-collection-id: ${{ steps.bootstrap.outputs.smoke-collection-id }}
+          contract-collection-id: ${{ steps.bootstrap.outputs.contract-collection-id }}
+          monitor-id: ${{ steps.existing.outputs.monitor_id }}
+          mock-url: ${{ steps.existing.outputs.mock_url }}
+          environments-json: ${{ env.POSTMAN_ENVIRONMENTS_JSON }}
+          env-runtime-urls-json: ${{ env.POSTMAN_ENV_RUNTIME_URLS_JSON }}
+          system-env-map-json: ${{ env.POSTMAN_SYSTEM_ENV_MAP_JSON }}
+          environment-uids-json: ${{ steps.existing.outputs.environment_uids_json }}
+          monitor-cron: ${{ env.POSTMAN_MONITOR_CRON }}
+          generate-ci-workflow: 'false'
+          repo-write-mode: none
+          workspace-link-enabled: 'false'
+          artifact-dir: postman/${{ matrix.projectName }}
+          spec-id: ${{ steps.bootstrap.outputs.spec-id }}
+          spec-path: ${{ matrix.specPath }}
+          postman-api-key: ${{ secrets.POSTMAN_API_KEY }}
+          postman-access-token: ${{ secrets.POSTMAN_ACCESS_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          gh-fallback-token: ${{ secrets.GH_FALLBACK_TOKEN }}
+          org-mode: ${{ env.POSTMAN_TEAM_ID != '' && 'true' || 'false' }}
+
+      - id: sync_state
+        name: Resolve Spec State
+        env:
+          WORKSPACE_ID: ${{ needs.anchor-onboarding.outputs.workspace-id }}
+          SPEC_ID: ${{ steps.bootstrap.outputs.spec-id || steps.existing.outputs.spec_id }}
+          BASELINE_COLLECTION_ID: ${{ steps.bootstrap.outputs.baseline-collection-id || steps.existing.outputs.baseline_collection_id }}
+          SMOKE_COLLECTION_ID: ${{ steps.bootstrap.outputs.smoke-collection-id || steps.existing.outputs.smoke_collection_id }}
+          CONTRACT_COLLECTION_ID: ${{ steps.bootstrap.outputs.contract-collection-id || steps.existing.outputs.contract_collection_id }}
+          MONITOR_ID: ${{ steps.repo_sync.outputs.monitor-id || steps.existing.outputs.monitor_id }}
+          MOCK_URL: ${{ steps.repo_sync.outputs.mock-url || steps.existing.outputs.mock_url }}
+          ENVIRONMENT_UIDS_JSON: ${{ steps.repo_sync.outputs.environment-uids-json || steps.existing.outputs.environment_uids_json || '{}' }}
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const outputs = {
+            workspace_id: process.env.WORKSPACE_ID || '',
+            spec_id: process.env.SPEC_ID || '',
+            baseline_collection_id: process.env.BASELINE_COLLECTION_ID || '',
+            smoke_collection_id: process.env.SMOKE_COLLECTION_ID || '',
+            contract_collection_id: process.env.CONTRACT_COLLECTION_ID || '',
+            monitor_id: process.env.MONITOR_ID || '',
+            mock_url: process.env.MOCK_URL || '',
+            environment_uids_json: process.env.ENVIRONMENT_UIDS_JSON || '{}'
+          };
+
+          for (const [key, value] of Object.entries(outputs)) {
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, `${key}=${value}\n`);
+          }
+          NODE
+
+      - id: env_uid
+        name: Resolve Environment UID
+        env:
+          ENV_UIDS_JSON: ${{ steps.sync_state.outputs.environment_uids_json }}
+        run: |
+          node <<'NODE'
+          const envs = JSON.parse(process.env.ENV_UIDS_JSON || '{}');
+          const selected = envs.prod || envs.stage || envs.staging || Object.values(envs)[0] || '';
+          require('node:fs').appendFileSync(process.env.GITHUB_OUTPUT, `environment_uid=${selected}\n`);
+          NODE
+
+      - name: Run Smoke Collection
+        if: steps.env_uid.outputs.environment_uid != '' && env.POSTMAN_ENV_RUNTIME_URLS_JSON != '{}' && env.POSTMAN_ENV_RUNTIME_URLS_JSON != ''
+        uses: postmanlabs/postman-cli-action@v1
+        with:
+          command: >-
+            collection run ${{ steps.sync_state.outputs.smoke_collection_id }}
+            --environment ${{ steps.env_uid.outputs.environment_uid }}
+          api-key: ${{ secrets.POSTMAN_API_KEY }}
+
+      - name: Run Contract Collection
+        if: steps.env_uid.outputs.environment_uid != '' && env.POSTMAN_ENV_RUNTIME_URLS_JSON != '{}' && env.POSTMAN_ENV_RUNTIME_URLS_JSON != ''
+        uses: postmanlabs/postman-cli-action@v1
+        with:
+          command: >-
+            collection run ${{ steps.sync_state.outputs.contract_collection_id }}
+            --environment ${{ steps.env_uid.outputs.environment_uid }}
+          api-key: ${{ secrets.POSTMAN_API_KEY }}
+
+      - name: Insights Onboarding
+        if: >
+          ((github.event_name == 'workflow_dispatch' && github.event.inputs.enable_insights == 'true') ||
+          env.POSTMAN_ENABLE_INSIGHTS == 'true') &&
+          steps.env_uid.outputs.environment_uid != ''
+        uses: postman-cs/postman-insights-onboarding-action@5387b8431cf548ab2250945e74612c6f0a9ed56e
+        with:
+          project-name: ${{ matrix.projectName }}
+          workspace-id: ${{ needs.anchor-onboarding.outputs.workspace-id }}
+          environment-id: ${{ steps.env_uid.outputs.environment_uid }}
+          cluster-name: ${{ env.POSTMAN_INSIGHTS_CLUSTER_NAME }}
+          postman-access-token: ${{ secrets.POSTMAN_ACCESS_TOKEN }}
+          postman-api-key: ${{ secrets.POSTMAN_API_KEY }}
+          postman-team-id: ${{ env.POSTMAN_TEAM_ID }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          poll-timeout-seconds: ${{ env.POSTMAN_INSIGHTS_POLL_TIMEOUT_SECONDS }}
+          poll-interval-seconds: ${{ env.POSTMAN_INSIGHTS_POLL_INTERVAL_SECONDS }}
+
+      - name: Persist Spec State Artifact
+        run: >
+          node scripts/postman/write-spec-state.mjs
+          --output ".postman/state-${{ matrix.projectName }}.json"
+          --spec-path "${{ matrix.specPath }}"
+          --project-name "${{ matrix.projectName }}"
+          --workspace-id "${{ steps.sync_state.outputs.workspace_id }}"
+          --spec-id "${{ steps.sync_state.outputs.spec_id }}"
+          --baseline-collection-id "${{ steps.sync_state.outputs.baseline_collection_id }}"
+          --smoke-collection-id "${{ steps.sync_state.outputs.smoke_collection_id }}"
+          --contract-collection-id "${{ steps.sync_state.outputs.contract_collection_id }}"
+          --monitor-id "${{ steps.sync_state.outputs.monitor_id }}"
+          --mock-url "${{ steps.sync_state.outputs.mock_url }}"
+          --environment-uids-json '${{ steps.sync_state.outputs.environment_uids_json }}'
+
+      - name: Package Spec Export Artifact
+        run: |
+          mkdir -p .postman/export-bundles
+          tar -C postman -czf ".postman/export-bundles/${{ matrix.projectName }}.tgz" "${{ matrix.projectName }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: postman-spec-state-${{ matrix.projectName }}
+          path: .postman/state-${{ matrix.projectName }}.json
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: postman-export-bundle-${{ matrix.projectName }}
+          path: .postman/export-bundles/${{ matrix.projectName }}.tgz
+
+  finalize-manifest:
+    needs:
+      - resolve-specs
+      - anchor-onboarding
+      - sync-remaining-specs
+    if: always() && needs.resolve-specs.outputs.has-specs == 'true' && needs.anchor-onboarding.result == 'success' && (needs.sync-remaining-specs.result == 'success' || needs.sync-remaining-specs.result == 'skipped')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: postman-spec-state-*
+          merge-multiple: true
+          path: .postman/states
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: postman-export-bundle-*
+          merge-multiple: true
+          path: .postman/export-bundles
+
+      - name: Delete Removed Postman Assets
+        env:
+          POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
+        run: node scripts/postman/delete-removed-assets.mjs .postman/spec-hub-manifest.json
+
+      - name: Merge Spec Hub Manifest
+        run: >
+          node scripts/postman/merge-spec-manifest.mjs
+          --manifest .postman/spec-hub-manifest.json
+          --states-dir .postman/states
+          ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.spec_path != '' && '--state-only true' || '' }}
+
+      - name: Sync Postman Monorepo Export Tree
+        run: |
+          mkdir -p postman
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const manifest = JSON.parse(fs.readFileSync('.postman/spec-hub-manifest.json', 'utf8'));
+          const keep = new Set(
+            Object.values(manifest.specs || {})
+              .map((entry) => String(entry?.projectName || '').trim())
+              .filter(Boolean)
+          );
+
+          if (!fs.existsSync('postman')) {
+            fs.mkdirSync('postman', { recursive: true });
+          }
+
+          for (const entry of fs.readdirSync('postman', { withFileTypes: true })) {
+            if (!entry.isDirectory()) {
+              continue;
+            }
+            if (!keep.has(entry.name)) {
+              fs.rmSync(path.join('postman', entry.name), { recursive: true, force: true });
+            }
+          }
+          NODE
+
+          copied=0
+          shopt -s nullglob
+          for archive in .postman/export-bundles/*.tgz; do
+            [ -f "${archive}" ] || continue
+            project_name="$(basename "${archive}" .tgz)"
+            rm -rf "postman/${project_name}"
+            tar -xzf "${archive}" -C postman
+            copied=$((copied + 1))
+          done
+
+          if [ "${copied}" -eq 0 ]; then
+            echo "No Postman export archives were found."
+            find .postman/export-bundles -maxdepth 2 -type f | sort
+            exit 1
+          fi
+
+      - name: Render Postman Monorepo Files
+        run: >
+          node scripts/postman/render-postman-monorepo.mjs
+          --manifest .postman/spec-hub-manifest.json
+
+      - name: Commit Updated Postman State
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -z "$(git status --porcelain -- .postman/spec-hub-manifest.json .postman/resources.yaml .postman/workflows.yaml postman)" ]; then
+            echo "Postman monorepo state already up to date."
+            exit 0
+          fi
+
+          git config user.name "Postman NFL Sync"
+          git config user.email "help@postman.com"
+          git add .postman/spec-hub-manifest.json .postman/resources.yaml .postman/workflows.yaml postman
+          git commit -m "chore(postman): refresh spec hub manifest [skip ci]"
+          git push origin HEAD:${GITHUB_REF_NAME}

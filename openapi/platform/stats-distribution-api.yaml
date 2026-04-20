@@ -1,0 +1,163 @@
+openapi: 3.0.3
+info:
+  title: NFL Stats Distribution API
+  version: 1.0.0
+  description: Fictional internal API for downstream game snapshots, drive detail, and passing leaderboards.
+servers:
+  - url: https://stage-api.nfl.example.com/stats
+    description: Stage
+  - url: https://api.nfl.example.com/stats
+    description: Production
+tags:
+  - name: Snapshots
+  - name: Drives
+  - name: Leaderboards
+security:
+  - bearerAuth: []
+paths:
+  /games/{gameId}/snapshots:
+    get:
+      operationId: getGameSnapshot
+      summary: Get the latest normalized game snapshot for downstream consumers
+      tags: [Snapshots]
+      parameters:
+        - $ref: "#/components/parameters/GameId"
+      responses:
+        "200":
+          description: Game snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GameSnapshot"
+  /drives/{driveId}:
+    get:
+      operationId: getDriveDetail
+      summary: Get scoring and play-count detail for a drive
+      tags: [Drives]
+      parameters:
+        - $ref: "#/components/parameters/DriveId"
+      responses:
+        "200":
+          description: Drive detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DriveRecord"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /leaderboards/passing:
+    get:
+      operationId: getPassingLeaderboard
+      summary: Get passing leaderboard slices for a season or week
+      tags: [Leaderboards]
+      parameters:
+        - name: season
+          in: query
+          schema:
+            type: integer
+        - name: week
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Passing leaders
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PassingLeader"
+components:
+  parameters:
+    GameId:
+      name: gameId
+      in: path
+      required: true
+      schema:
+        type: string
+    DriveId:
+      name: driveId
+      in: path
+      required: true
+      schema:
+        type: string
+  schemas:
+    GameSnapshot:
+      type: object
+      properties:
+        gameId:
+          type: string
+        clock:
+          type: string
+        quarter:
+          type: integer
+        possessionClubId:
+          type: string
+        homeScore:
+          type: integer
+        awayScore:
+          type: integer
+        lastUpdatedAt:
+          type: string
+          format: date-time
+    DriveRecord:
+      type: object
+      properties:
+        driveId:
+          type: string
+        gameId:
+          type: string
+        offenseClubId:
+          type: string
+        playCount:
+          type: integer
+        yards:
+          type: integer
+        result:
+          type: string
+          enum: [touchdown, field-goal, punt, turnover, turnover-on-downs, end-of-half]
+    PassingLeader:
+      type: object
+      properties:
+        playerId:
+          type: string
+        fullName:
+          type: string
+        clubId:
+          type: string
+        passingYards:
+          type: integer
+        passingTouchdowns:
+          type: integer
+        interceptions:
+          type: integer
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        statusCode:
+          type: integer
+  responses:
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

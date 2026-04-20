@@ -1,0 +1,157 @@
+openapi: 3.0.3
+info:
+  title: NFL Officiating Assignments API
+  version: 1.0.0
+  description: Fictional internal API for officiating crew planning and game-day assignments.
+servers:
+  - url: https://stage-api.nfl.example.com/officiating
+    description: Stage
+  - url: https://api.nfl.example.com/officiating
+    description: Production
+tags:
+  - name: Crews
+  - name: Assignments
+security:
+  - bearerAuth: []
+paths:
+  /weeks/{week}/crews:
+    get:
+      operationId: listWeeklyCrews
+      summary: List officiating crews available for a given week
+      tags: [Crews]
+      parameters:
+        - $ref: "#/components/parameters/Week"
+        - name: season
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Weekly crew list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/CrewSummary"
+  /games/{gameId}/assignments:
+    get:
+      operationId: getGameAssignments
+      summary: Get officiating assignments for a game
+      tags: [Assignments]
+      parameters:
+        - $ref: "#/components/parameters/GameId"
+      responses:
+        "200":
+          description: Game assignments
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  gameId:
+                    type: string
+                  assignments:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Assignment"
+    post:
+      operationId: saveGameAssignments
+      summary: Create or replace officiating assignments for a game
+      tags: [Assignments]
+      parameters:
+        - $ref: "#/components/parameters/GameId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignmentRequest"
+      responses:
+        "200":
+          description: Assignments saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssignmentRequest"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+components:
+  parameters:
+    Week:
+      name: week
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 23
+    GameId:
+      name: gameId
+      in: path
+      required: true
+      schema:
+        type: string
+  schemas:
+    CrewSummary:
+      type: object
+      required: [crewId, refereeName, homeRegion, travelStatus]
+      properties:
+        crewId:
+          type: string
+        refereeName:
+          type: string
+        homeRegion:
+          type: string
+        travelStatus:
+          type: string
+          enum: [scheduled, standby, unavailable]
+    Assignment:
+      type: object
+      required: [officialId, fullName, position]
+      properties:
+        officialId:
+          type: string
+        fullName:
+          type: string
+        position:
+          type: string
+          enum: [referee, umpire, down-judge, line-judge, field-judge, side-judge, back-judge]
+        alternate:
+          type: boolean
+    AssignmentRequest:
+      type: object
+      required: [crewId, assignments]
+      properties:
+        crewId:
+          type: string
+        assignments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Assignment"
+        notes:
+          type: string
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        statusCode:
+          type: integer
+  responses:
+    BadRequest:
+      description: Invalid request payload
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

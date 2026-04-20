@@ -1,0 +1,191 @@
+openapi: 3.0.3
+info:
+  title: NFL Season Schedule API
+  version: 1.0.0
+  description: Fictional internal API for season planning, weekly schedules, and game detail lookups.
+servers:
+  - url: https://stage-api.nfl.example.com/schedule
+    description: Stage
+  - url: https://api.nfl.example.com/schedule
+    description: Production
+tags:
+  - name: Seasons
+  - name: Games
+security:
+  - bearerAuth: []
+paths:
+  /seasons/{season}/weeks:
+    get:
+      operationId: listSeasonWeeks
+      summary: List weekly schedule blocks for a season
+      tags: [Seasons]
+      parameters:
+        - $ref: "#/components/parameters/Season"
+      responses:
+        "200":
+          description: Weekly schedule blocks
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/WeekSummary"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /games:
+    get:
+      operationId: searchGames
+      summary: Search games by season, week, or club
+      tags: [Games]
+      parameters:
+        - name: season
+          in: query
+          schema:
+            type: integer
+        - name: week
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 23
+        - name: clubId
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Matching games
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/GameSummary"
+  /games/{gameId}:
+    get:
+      operationId: getGameById
+      summary: Get full schedule and broadcast detail for a game
+      tags: [Games]
+      parameters:
+        - $ref: "#/components/parameters/GameId"
+      responses:
+        "200":
+          description: Game detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GameDetail"
+        "404":
+          $ref: "#/components/responses/NotFound"
+components:
+  parameters:
+    Season:
+      name: season
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 2000
+    GameId:
+      name: gameId
+      in: path
+      required: true
+      schema:
+        type: string
+  schemas:
+    WeekSummary:
+      type: object
+      required: [season, week, startDate, endDate, phase]
+      properties:
+        season:
+          type: integer
+        week:
+          type: integer
+        phase:
+          type: string
+          enum: [preseason, regular, postseason]
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+    GameSummary:
+      type: object
+      required: [gameId, season, week, kickoffAt, homeClubId, awayClubId, status]
+      properties:
+        gameId:
+          type: string
+        season:
+          type: integer
+        week:
+          type: integer
+        kickoffAt:
+          type: string
+          format: date-time
+        homeClubId:
+          type: string
+        awayClubId:
+          type: string
+        venueCode:
+          type: string
+        status:
+          type: string
+          enum: [draft, scheduled, flex-review, locked, completed]
+    GameDetail:
+      allOf:
+        - $ref: "#/components/schemas/GameSummary"
+        - type: object
+          properties:
+            venue:
+              $ref: "#/components/schemas/VenueReference"
+            nationalWindow:
+              $ref: "#/components/schemas/BroadcastWindow"
+    VenueReference:
+      type: object
+      properties:
+        venueId:
+          type: string
+        name:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+    BroadcastWindow:
+      type: object
+      properties:
+        network:
+          type: string
+        marketType:
+          type: string
+          enum: [national, regional, streaming]
+        kickoffSlot:
+          type: string
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        statusCode:
+          type: integer
+  responses:
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

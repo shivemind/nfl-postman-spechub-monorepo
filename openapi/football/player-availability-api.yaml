@@ -1,0 +1,173 @@
+openapi: 3.0.3
+info:
+  title: NFL Player Availability API
+  version: 1.0.0
+  description: Fictional internal API for injury reports, game status designations, and clearance updates.
+servers:
+  - url: https://stage-api.nfl.example.com/availability
+    description: Stage
+  - url: https://api.nfl.example.com/availability
+    description: Production
+tags:
+  - name: Reports
+  - name: Designations
+security:
+  - bearerAuth: []
+paths:
+  /clubs/{clubId}/injury-reports/latest:
+    get:
+      operationId: getLatestInjuryReport
+      summary: Get the most recent league-formatted injury report for a club
+      tags: [Reports]
+      parameters:
+        - $ref: "#/components/parameters/ClubId"
+      responses:
+        "200":
+          description: Latest injury report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InjuryReport"
+  /games/{gameId}/availability:
+    get:
+      operationId: getGameAvailability
+      summary: Get official game status designations for both clubs in a game
+      tags: [Reports]
+      parameters:
+        - $ref: "#/components/parameters/GameId"
+      responses:
+        "200":
+          description: Game availability report
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  gameId:
+                    type: string
+                  designations:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/GameStatusDesignation"
+  /players/{playerId}/designations:
+    put:
+      operationId: upsertPlayerDesignation
+      summary: Create or replace a player's latest practice or game designation
+      tags: [Designations]
+      parameters:
+        - $ref: "#/components/parameters/PlayerId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DesignationUpsertRequest"
+      responses:
+        "200":
+          description: Designation saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GameStatusDesignation"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+components:
+  parameters:
+    ClubId:
+      name: clubId
+      in: path
+      required: true
+      schema:
+        type: string
+    GameId:
+      name: gameId
+      in: path
+      required: true
+      schema:
+        type: string
+    PlayerId:
+      name: playerId
+      in: path
+      required: true
+      schema:
+        type: string
+  schemas:
+    InjuryReport:
+      type: object
+      required: [clubId, reportDate, entries]
+      properties:
+        clubId:
+          type: string
+        reportDate:
+          type: string
+          format: date
+        submittedBy:
+          type: string
+        entries:
+          type: array
+          items:
+            $ref: "#/components/schemas/InjuryEntry"
+    InjuryEntry:
+      type: object
+      required: [playerId, bodyPart, participation]
+      properties:
+        playerId:
+          type: string
+        bodyPart:
+          type: string
+        participation:
+          type: string
+          enum: [did-not-practice, limited, full]
+        status:
+          type: string
+          enum: [questionable, doubtful, out, none]
+    GameStatusDesignation:
+      type: object
+      required: [playerId, designationType, status]
+      properties:
+        playerId:
+          type: string
+        designationType:
+          type: string
+          enum: [practice, game]
+        status:
+          type: string
+          enum: [none, questionable, doubtful, out]
+        reason:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+    DesignationUpsertRequest:
+      type: object
+      required: [designationType, status]
+      properties:
+        designationType:
+          type: string
+          enum: [practice, game]
+        status:
+          type: string
+          enum: [none, questionable, doubtful, out]
+        reason:
+          type: string
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        statusCode:
+          type: integer
+  responses:
+    BadRequest:
+      description: Invalid request payload
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

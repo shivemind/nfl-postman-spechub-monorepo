@@ -1,0 +1,153 @@
+openapi: 3.0.3
+info:
+  title: NFL Game Operations API
+  version: 1.0.0
+  description: Fictional internal API for run-of-show tracking, status updates, and incident logging.
+servers:
+  - url: https://stage-api.nfl.example.com/game-ops
+    description: Stage
+  - url: https://api.nfl.example.com/game-ops
+    description: Production
+tags:
+  - name: RunOfShow
+  - name: Incidents
+security:
+  - bearerAuth: []
+paths:
+  /games/{gameId}/run-of-show:
+    get:
+      operationId: getRunOfShow
+      summary: Get scheduled operational milestones for a game
+      tags: [RunOfShow]
+      parameters:
+        - $ref: "#/components/parameters/GameId"
+      responses:
+        "200":
+          description: Run of show
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunOfShow"
+    patch:
+      operationId: patchRunOfShow
+      summary: Update milestone timestamps or status for a game
+      tags: [RunOfShow]
+      parameters:
+        - $ref: "#/components/parameters/GameId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RunOfShowPatchRequest"
+      responses:
+        "200":
+          description: Run of show updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunOfShow"
+  /games/{gameId}/incident-logs:
+    post:
+      operationId: createIncidentLog
+      summary: Record an operational incident or escalation for a game
+      tags: [Incidents]
+      parameters:
+        - $ref: "#/components/parameters/GameId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IncidentLogRequest"
+      responses:
+        "201":
+          description: Incident created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IncidentLog"
+components:
+  parameters:
+    GameId:
+      name: gameId
+      in: path
+      required: true
+      schema:
+        type: string
+  schemas:
+    RunOfShow:
+      type: object
+      required: [gameId, milestones]
+      properties:
+        gameId:
+          type: string
+        operationsLead:
+          type: string
+        milestones:
+          type: array
+          items:
+            $ref: "#/components/schemas/Milestone"
+    Milestone:
+      type: object
+      required: [code, label, status]
+      properties:
+        code:
+          type: string
+        label:
+          type: string
+        scheduledAt:
+          type: string
+          format: date-time
+        actualAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [pending, in-progress, complete, delayed]
+    RunOfShowPatchRequest:
+      type: object
+      required: [milestones]
+      properties:
+        milestones:
+          type: array
+          items:
+            $ref: "#/components/schemas/Milestone"
+    IncidentLogRequest:
+      type: object
+      required: [category, severity, summary]
+      properties:
+        category:
+          type: string
+          enum: [medical, weather, security, broadcast, field, crowd]
+        severity:
+          type: string
+          enum: [low, medium, high, critical]
+        summary:
+          type: string
+        reportedBy:
+          type: string
+    IncidentLog:
+      allOf:
+        - $ref: "#/components/schemas/IncidentLogRequest"
+        - type: object
+          properties:
+            incidentId:
+              type: string
+            openedAt:
+              type: string
+              format: date-time
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        statusCode:
+          type: integer
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
