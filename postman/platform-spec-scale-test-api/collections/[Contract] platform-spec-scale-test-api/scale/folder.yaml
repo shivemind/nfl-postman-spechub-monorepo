@@ -1,0 +1,4 @@
+type: folder
+name: scale
+items:
+  - ref: ./v1/folder.yaml

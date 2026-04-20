@@ -1,0 +1,58 @@
+type: http
+name: Get scheduled broadcast windows and rights details for a game
+url: '{{baseUrl}}/games/:gameId/windows'
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+pathVariables:
+  - key: gameId
+    value: string
+scripts:
+  - type: afterResponse
+    code:
+      - // [Smoke] Auto-generated test assertions
+      - pm.test('Status code is successful (2xx)', function () {
+      - '    pm.response.to.be.success;'
+      - '});'
+      - pm.test('Response time is acceptable', function () {
+      - '    var threshold = parseInt(pm.environment.get(''RESPONSE_TIME_THRESHOLD'') || ''2000'', 10);'
+      - '    pm.expect(pm.response.responseTime).to.be.below(threshold);'
+      - '});'
+      - pm.test('Response body is not empty', function () {
+      - '    if (pm.response.code !== 204) {'
+      - '        var body = pm.response.text();'
+      - '        pm.expect(body.length).to.be.above(0);'
+      - '    }'
+      - '});'
+    language: text/javascript
+examples:
+  - response:
+      statusCode: 200
+      statusText: OK
+      body:
+        type: json
+        content: |-
+          {
+            "gameId": "string",
+            "windows": [
+              {
+                "network": "string",
+                "territory": "string",
+                "feedType": "backup",
+                "startsAt": "2008-03-09T22:09:23.589Z",
+                "endsAt": "2016-11-24T05:43:57.961Z"
+              },
+              {
+                "network": "string",
+                "territory": "string",
+                "feedType": "backup",
+                "startsAt": "1983-08-03T18:24:17.448Z",
+                "endsAt": "1949-12-25T11:05:09.070Z"
+              }
+            ]
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Broadcast windows

@@ -1,0 +1,19 @@
+$schema: https://schema.postman.com/json/draft-2020-12/collection/v3.0.0/
+type: collection
+name: '[Smoke] football-roster-management-api'
+description: Fictional internal API for club rosters, transactions, and player profile lookups.
+id: 0e23ea7b-fde0-49b3-825f-7ee6e48dd9d8
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{bearerToken}}'
+      type: string
+variables:
+  - key: baseUrl
+    value: https://stage-api.nfl.example.com/rosters
+    type: any
+items:
+  - ref: ./clubs/folder.yaml
+  - ref: ./players/folder.yaml
+  - ref: ./00 - Resolve Secrets.request.yaml

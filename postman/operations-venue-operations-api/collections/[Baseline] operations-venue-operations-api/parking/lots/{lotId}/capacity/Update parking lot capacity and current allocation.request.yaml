@@ -1,0 +1,38 @@
+type: http
+name: Update parking lot capacity and current allocation
+url: '{{baseUrl}}/parking/lots/:lotId/capacity'
+method: PUT
+headers:
+  - key: Content-Type
+    value: application/json
+  - key: Accept
+    value: application/json
+pathVariables:
+  - key: lotId
+    value: string
+body:
+  type: json
+  content: |-
+    {
+      "totalSpots": 9030,
+      "reservedSpots": 7650,
+      "availableSpots": 1067
+    }
+examples:
+  - response:
+      statusCode: 200
+      statusText: OK
+      body:
+        type: json
+        content: |-
+          {
+            "totalSpots": 7413,
+            "reservedSpots": 8052,
+            "availableSpots": 4350,
+            "lotId": "string",
+            "updatedAt": "1957-06-11T09:39:31.169Z"
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Parking capacity updated

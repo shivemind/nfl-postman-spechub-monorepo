@@ -1,0 +1,43 @@
+type: http
+name: Get the active roster, reserve lists, and practice squad for a club
+url: '{{baseUrl}}/clubs/:clubId/roster?season=1881'
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+queryParams:
+  - key: season
+    value: '1881'
+pathVariables:
+  - key: clubId
+    value: string
+examples:
+  - response:
+      statusCode: 200
+      statusText: OK
+      body:
+        type: json
+        content: |-
+          {
+            "clubId": "string",
+            "players": [
+              {
+                "playerId": "string",
+                "fullName": "string",
+                "jerseyNumber": 7548,
+                "position": "string",
+                "rosterStatus": "active"
+              },
+              {
+                "playerId": "string",
+                "fullName": "string",
+                "jerseyNumber": 6550,
+                "position": "string",
+                "rosterStatus": "reserve"
+              }
+            ]
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Club roster

@@ -1,0 +1,4 @@
+type: folder
+name: passing
+items:
+  - ref: ./Get passing leaderboard slices for a season or week.request.yaml

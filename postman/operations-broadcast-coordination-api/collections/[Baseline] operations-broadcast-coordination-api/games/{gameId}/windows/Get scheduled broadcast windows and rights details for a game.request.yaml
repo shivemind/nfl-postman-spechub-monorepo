@@ -1,0 +1,40 @@
+type: http
+name: Get scheduled broadcast windows and rights details for a game
+url: '{{baseUrl}}/games/:gameId/windows'
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+pathVariables:
+  - key: gameId
+    value: string
+examples:
+  - response:
+      statusCode: 200
+      statusText: OK
+      body:
+        type: json
+        content: |-
+          {
+            "gameId": "string",
+            "windows": [
+              {
+                "network": "string",
+                "territory": "string",
+                "feedType": "backup",
+                "startsAt": "2000-02-10T04:09:07.295Z",
+                "endsAt": "1970-04-24T09:58:01.087Z"
+              },
+              {
+                "network": "string",
+                "territory": "string",
+                "feedType": "primary",
+                "startsAt": "2025-01-14T09:01:50.727Z",
+                "endsAt": "2016-12-13T19:20:24.433Z"
+              }
+            ]
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Broadcast windows

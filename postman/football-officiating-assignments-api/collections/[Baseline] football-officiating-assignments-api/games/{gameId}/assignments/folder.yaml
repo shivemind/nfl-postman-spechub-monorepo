@@ -1,0 +1,5 @@
+type: folder
+name: assignments
+items:
+  - ref: ./Get officiating assignments for a game.request.yaml
+  - ref: ./Create or replace officiating assignments for a game.request.yaml

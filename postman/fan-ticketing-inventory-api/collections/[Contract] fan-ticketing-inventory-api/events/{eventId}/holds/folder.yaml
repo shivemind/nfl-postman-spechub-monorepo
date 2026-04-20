@@ -1,0 +1,4 @@
+type: folder
+name: holds
+items:
+  - ref: ./Place a temporary hold on seats for league, club, or partner use.request.yaml

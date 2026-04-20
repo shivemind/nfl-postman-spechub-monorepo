@@ -1,0 +1,74 @@
+type: http
+name: Create or replace an ad break plan for a game broadcast
+url: '{{baseUrl}}/games/:gameId/ad-breaks'
+method: POST
+headers:
+  - key: Content-Type
+    value: application/json
+  - key: Accept
+    value: application/json
+pathVariables:
+  - key: gameId
+    value: string
+body:
+  type: json
+  content: |-
+    {
+      "breaks": [
+        {
+          "sequence": 211,
+          "trigger": "two-minute-warning",
+          "plannedDurationSeconds": 1207
+        },
+        {
+          "sequence": 5053,
+          "trigger": "timeout",
+          "plannedDurationSeconds": 5245
+        }
+      ]
+    }
+scripts:
+  - type: afterResponse
+    code:
+      - // [Smoke] Auto-generated test assertions
+      - pm.test('Status code is successful (2xx)', function () {
+      - '    pm.response.to.be.success;'
+      - '});'
+      - pm.test('Response time is acceptable', function () {
+      - '    var threshold = parseInt(pm.environment.get(''RESPONSE_TIME_THRESHOLD'') || ''2000'', 10);'
+      - '    pm.expect(pm.response.responseTime).to.be.below(threshold);'
+      - '});'
+      - pm.test('Response body is not empty', function () {
+      - '    if (pm.response.code !== 204) {'
+      - '        var body = pm.response.text();'
+      - '        pm.expect(body.length).to.be.above(0);'
+      - '    }'
+      - '});'
+    language: text/javascript
+examples:
+  - response:
+      statusCode: 201
+      statusText: Created
+      body:
+        type: json
+        content: |-
+          {
+            "breaks": [
+              {
+                "sequence": 5216,
+                "trigger": "two-minute-warning",
+                "plannedDurationSeconds": 9113
+              },
+              {
+                "sequence": 4880,
+                "trigger": "quarter-end",
+                "plannedDurationSeconds": 9757
+              }
+            ],
+            "gameId": "string",
+            "version": 1440
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Ad break plan created

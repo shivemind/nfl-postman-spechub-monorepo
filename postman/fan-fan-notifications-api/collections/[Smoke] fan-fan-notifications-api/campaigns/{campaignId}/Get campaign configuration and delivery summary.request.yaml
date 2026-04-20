@@ -1,0 +1,64 @@
+type: http
+name: Get campaign configuration and delivery summary
+url: '{{baseUrl}}/campaigns/:campaignId'
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+pathVariables:
+  - key: campaignId
+    value: string
+scripts:
+  - type: afterResponse
+    code:
+      - // [Smoke] Auto-generated test assertions
+      - pm.test('Status code is successful (2xx)', function () {
+      - '    pm.response.to.be.success;'
+      - '});'
+      - pm.test('Response time is acceptable', function () {
+      - '    var threshold = parseInt(pm.environment.get(''RESPONSE_TIME_THRESHOLD'') || ''2000'', 10);'
+      - '    pm.expect(pm.response.responseTime).to.be.below(threshold);'
+      - '});'
+      - pm.test('Response body is not empty', function () {
+      - '    if (pm.response.code !== 204) {'
+      - '        var body = pm.response.text();'
+      - '        pm.expect(body.length).to.be.above(0);'
+      - '    }'
+      - '});'
+    language: text/javascript
+examples:
+  - response:
+      statusCode: 200
+      statusText: OK
+      body:
+        type: json
+        content: |-
+          {
+            "name": "string",
+            "channel": "in-app",
+            "audienceType": "app-users",
+            "messageTemplate": "string",
+            "scheduledAt": "1953-12-29T10:48:39.531Z",
+            "campaignId": "string",
+            "status": "draft",
+            "deliveryCount": 8214
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Campaign detail
+  - response:
+      statusCode: 404
+      statusText: Not Found
+      body:
+        type: json
+        content: |-
+          {
+            "error": "string",
+            "message": "string",
+            "statusCode": 7755
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Resource not found

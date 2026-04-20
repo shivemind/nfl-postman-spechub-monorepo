@@ -1,0 +1,55 @@
+type: http
+name: Create a notification campaign for a club, league, or event audience
+url: '{{baseUrl}}/campaigns'
+method: POST
+headers:
+  - key: Content-Type
+    value: application/json
+  - key: Accept
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "string",
+      "channel": "push",
+      "audienceType": "app-users",
+      "messageTemplate": "string",
+      "scheduledAt": "1963-10-01T03:18:28.298Z"
+    }
+examples:
+  - response:
+      statusCode: 201
+      statusText: Created
+      body:
+        type: json
+        content: |-
+          {
+            "name": "string",
+            "channel": "email",
+            "audienceType": "app-users",
+            "messageTemplate": "string",
+            "scheduledAt": "1964-12-07T04:33:17.231Z",
+            "campaignId": "string",
+            "status": "cancelled",
+            "deliveryCount": 3549
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Campaign created
+  - response:
+      statusCode: 400
+      statusText: Bad Request
+      body:
+        type: json
+        content: |-
+          {
+            "error": "string",
+            "message": "string",
+            "statusCode": 9924
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Invalid request payload

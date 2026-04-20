@@ -1,0 +1,96 @@
+type: http
+name: Retrieve scale-test payload 146
+url: '{{baseUrl}}/scale/v1/resource-146?includeMetadata=true'
+method: GET
+headers:
+  - key: traceId
+    value: string
+  - key: Accept
+    value: application/json
+queryParams:
+  - key: includeMetadata
+    value: 'true'
+scripts:
+  - type: afterResponse
+    code:
+      - // [Smoke] Auto-generated test assertions
+      - pm.test('Status code is successful (2xx)', function () {
+      - '    pm.response.to.be.success;'
+      - '});'
+      - pm.test('Response time is acceptable', function () {
+      - '    var threshold = parseInt(pm.environment.get(''RESPONSE_TIME_THRESHOLD'') || ''2000'', 10);'
+      - '    pm.expect(pm.response.responseTime).to.be.below(threshold);'
+      - '});'
+      - pm.test('Response body is not empty', function () {
+      - '    if (pm.response.code !== 204) {'
+      - '        var body = pm.response.text();'
+      - '        pm.expect(body.length).to.be.above(0);'
+      - '    }'
+      - '});'
+    language: text/javascript
+examples:
+  - response:
+      statusCode: 200
+      statusText: OK
+      body:
+        type: json
+        content: |-
+          {
+            "resourceId": "scale-146",
+            "displayName": "NFL Scale Resource 146",
+            "status": "active",
+            "includeMetadata": true,
+            "metadata": {
+              "partition": "scale-6",
+              "ordinal": 146
+            }
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Successful lookup for scale-146
+  - response:
+      statusCode: 400
+      statusText: Bad Request
+      body:
+        type: json
+        content: |-
+          {
+            "error": "string",
+            "message": "string",
+            "statusCode": 8324
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Invalid request parameters
+  - response:
+      statusCode: 429
+      statusText: Too Many Requests
+      body:
+        type: json
+        content: |-
+          {
+            "error": "string",
+            "message": "string",
+            "statusCode": 8324
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Rate limit exceeded
+  - response:
+      statusCode: 500
+      statusText: Internal Server Error
+      body:
+        type: json
+        content: |-
+          {
+            "error": "string",
+            "message": "string",
+            "statusCode": 8324
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Internal platform error

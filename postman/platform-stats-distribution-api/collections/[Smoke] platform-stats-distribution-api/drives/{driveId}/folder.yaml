@@ -1,0 +1,4 @@
+type: folder
+name: '{driveId}'
+items:
+  - ref: ./Get scoring and play-count detail for a drive.request.yaml

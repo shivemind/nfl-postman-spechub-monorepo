@@ -1,0 +1,4 @@
+type: folder
+name: '{deliveryId}'
+items:
+  - ref: ./Get delivery status for an individual campaign send.request.yaml

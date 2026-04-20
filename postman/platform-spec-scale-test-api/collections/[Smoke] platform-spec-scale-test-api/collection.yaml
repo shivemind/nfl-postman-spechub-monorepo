@@ -1,0 +1,17 @@
+$schema: https://schema.postman.com/json/draft-2020-12/collection/v3.0.0/
+type: collection
+name: '[Smoke] platform-spec-scale-test-api'
+description: Synthetic NFL scale-test API used to validate large Spec Hub onboarding scenarios.
+id: e2895dcc-fb32-448e-8ca7-8216b7041bba
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{bearerToken}}'
+      type: string
+variables:
+  - key: baseUrl
+    value: https://stage-api.nfl.example.com/spec-scale
+items:
+  - ref: ./scale/folder.yaml
+  - ref: ./00 - Resolve Secrets.request.yaml

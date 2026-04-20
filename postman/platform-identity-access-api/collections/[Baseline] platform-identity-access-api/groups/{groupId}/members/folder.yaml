@@ -1,0 +1,4 @@
+type: folder
+name: members
+items:
+  - ref: ./List direct members of an access group.request.yaml

@@ -1,0 +1,4 @@
+type: folder
+name: groups
+items:
+  - ref: ./{groupId}/folder.yaml

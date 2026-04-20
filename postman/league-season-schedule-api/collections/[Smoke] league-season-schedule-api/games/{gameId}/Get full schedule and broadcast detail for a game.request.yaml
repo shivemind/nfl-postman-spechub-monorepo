@@ -1,0 +1,75 @@
+type: http
+name: Get full schedule and broadcast detail for a game
+url: '{{baseUrl}}/games/:gameId'
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+pathVariables:
+  - key: gameId
+    value: string
+scripts:
+  - type: afterResponse
+    code:
+      - // [Smoke] Auto-generated test assertions
+      - pm.test('Status code is successful (2xx)', function () {
+      - '    pm.response.to.be.success;'
+      - '});'
+      - pm.test('Response time is acceptable', function () {
+      - '    var threshold = parseInt(pm.environment.get(''RESPONSE_TIME_THRESHOLD'') || ''2000'', 10);'
+      - '    pm.expect(pm.response.responseTime).to.be.below(threshold);'
+      - '});'
+      - pm.test('Response body is not empty', function () {
+      - '    if (pm.response.code !== 204) {'
+      - '        var body = pm.response.text();'
+      - '        pm.expect(body.length).to.be.above(0);'
+      - '    }'
+      - '});'
+    language: text/javascript
+examples:
+  - response:
+      statusCode: 200
+      statusText: OK
+      body:
+        type: json
+        content: |-
+          {
+            "gameId": "string",
+            "season": 6151,
+            "week": 2180,
+            "kickoffAt": "2022-03-21T11:43:09.657Z",
+            "homeClubId": "string",
+            "awayClubId": "string",
+            "status": "draft",
+            "venueCode": "string",
+            "venue": {
+              "venueId": "string",
+              "name": "string",
+              "city": "string",
+              "state": "string"
+            },
+            "nationalWindow": {
+              "network": "string",
+              "marketType": "national",
+              "kickoffSlot": "string"
+            }
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Game detail
+  - response:
+      statusCode: 404
+      statusText: Not Found
+      body:
+        type: json
+        content: |-
+          {
+            "error": "string",
+            "message": "string",
+            "statusCode": 2053
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Resource not found

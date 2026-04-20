@@ -1,0 +1,30 @@
+type: http
+name: Get the latest normalized game snapshot for downstream consumers
+url: '{{baseUrl}}/games/:gameId/snapshots'
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+pathVariables:
+  - key: gameId
+    value: string
+examples:
+  - response:
+      statusCode: 200
+      statusText: OK
+      body:
+        type: json
+        content: |-
+          {
+            "gameId": "string",
+            "clock": "string",
+            "quarter": 9685,
+            "possessionClubId": "string",
+            "homeScore": 4007,
+            "awayScore": 9636,
+            "lastUpdatedAt": "1963-09-29T12:41:05.114Z"
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Game snapshot

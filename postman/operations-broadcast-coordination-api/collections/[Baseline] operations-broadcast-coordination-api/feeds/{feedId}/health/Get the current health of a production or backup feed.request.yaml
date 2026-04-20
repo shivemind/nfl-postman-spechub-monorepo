@@ -1,0 +1,27 @@
+type: http
+name: Get the current health of a production or backup feed
+url: '{{baseUrl}}/feeds/:feedId/health'
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+pathVariables:
+  - key: feedId
+    value: string
+examples:
+  - response:
+      statusCode: 200
+      statusText: OK
+      body:
+        type: json
+        content: |-
+          {
+            "feedId": "string",
+            "status": "failed",
+            "bitrateMbps": 259.8855448185211,
+            "lastHeartbeatAt": "1994-02-26T03:44:34.712Z"
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Feed health

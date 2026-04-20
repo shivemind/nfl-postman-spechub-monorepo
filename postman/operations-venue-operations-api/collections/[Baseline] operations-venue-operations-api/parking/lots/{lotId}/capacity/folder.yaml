@@ -1,0 +1,4 @@
+type: folder
+name: capacity
+items:
+  - ref: ./Update parking lot capacity and current allocation.request.yaml

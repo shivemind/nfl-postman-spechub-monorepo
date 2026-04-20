@@ -1,0 +1,4 @@
+type: folder
+name: '{eventId}'
+items:
+  - ref: ./security-briefings/folder.yaml

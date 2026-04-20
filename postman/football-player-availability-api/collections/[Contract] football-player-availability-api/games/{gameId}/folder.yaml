@@ -1,0 +1,4 @@
+type: folder
+name: '{gameId}'
+items:
+  - ref: ./availability/folder.yaml

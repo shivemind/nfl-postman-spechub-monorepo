@@ -1,0 +1,4 @@
+type: folder
+name: parking
+items:
+  - ref: ./lots/folder.yaml

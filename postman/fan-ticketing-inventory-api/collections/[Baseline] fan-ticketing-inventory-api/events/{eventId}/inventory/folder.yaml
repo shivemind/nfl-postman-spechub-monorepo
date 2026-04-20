@@ -1,0 +1,4 @@
+type: folder
+name: inventory
+items:
+  - ref: ./Get sellable, held, and blocked inventory for an event.request.yaml

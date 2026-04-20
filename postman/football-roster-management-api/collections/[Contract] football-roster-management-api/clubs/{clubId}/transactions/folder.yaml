@@ -1,0 +1,4 @@
+type: folder
+name: transactions
+items:
+  - ref: ./Record a roster transaction for league review.request.yaml

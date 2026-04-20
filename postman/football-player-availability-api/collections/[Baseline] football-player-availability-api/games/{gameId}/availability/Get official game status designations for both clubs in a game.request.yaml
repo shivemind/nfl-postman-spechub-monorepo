@@ -1,0 +1,40 @@
+type: http
+name: Get official game status designations for both clubs in a game
+url: '{{baseUrl}}/games/:gameId/availability'
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+pathVariables:
+  - key: gameId
+    value: string
+examples:
+  - response:
+      statusCode: 200
+      statusText: OK
+      body:
+        type: json
+        content: |-
+          {
+            "gameId": "string",
+            "designations": [
+              {
+                "playerId": "string",
+                "designationType": "game",
+                "status": "none",
+                "reason": "string",
+                "updatedAt": "1948-07-09T07:36:23.528Z"
+              },
+              {
+                "playerId": "string",
+                "designationType": "practice",
+                "status": "out",
+                "reason": "string",
+                "updatedAt": "1992-04-18T14:45:26.712Z"
+              }
+            ]
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Game availability report

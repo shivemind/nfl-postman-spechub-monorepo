@@ -1,0 +1,4 @@
+type: folder
+name: orders
+items:
+  - ref: ./{orderId}/folder.yaml

@@ -1,0 +1,28 @@
+type: http
+name: Get metadata for a media asset referenced by story content
+url: '{{baseUrl}}/assets/:assetId'
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+pathVariables:
+  - key: assetId
+    value: string
+examples:
+  - response:
+      statusCode: 200
+      statusText: OK
+      body:
+        type: json
+        content: |-
+          {
+            "assetId": "string",
+            "mediaType": "audio",
+            "title": "string",
+            "durationSeconds": 4498,
+            "rightsWindow": "string"
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Asset detail

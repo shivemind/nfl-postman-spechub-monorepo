@@ -1,1 +1,119 @@
-workflows: {}
+workflows:
+  syncSpecToCollection:
+    -
+      spec: "../openapi/fan/content-publishing-api.yaml"
+      collection: "../postman/fan-content-publishing-api/collections/[Baseline] fan-content-publishing-api"
+    -
+      spec: "../openapi/fan/content-publishing-api.yaml"
+      collection: "../postman/fan-content-publishing-api/collections/[Smoke] fan-content-publishing-api"
+    -
+      spec: "../openapi/fan/content-publishing-api.yaml"
+      collection: "../postman/fan-content-publishing-api/collections/[Contract] fan-content-publishing-api"
+    -
+      spec: "../openapi/fan/fan-notifications-api.yaml"
+      collection: "../postman/fan-fan-notifications-api/collections/[Baseline] fan-fan-notifications-api"
+    -
+      spec: "../openapi/fan/fan-notifications-api.yaml"
+      collection: "../postman/fan-fan-notifications-api/collections/[Smoke] fan-fan-notifications-api"
+    -
+      spec: "../openapi/fan/fan-notifications-api.yaml"
+      collection: "../postman/fan-fan-notifications-api/collections/[Contract] fan-fan-notifications-api"
+    -
+      spec: "../openapi/fan/ticketing-inventory-api.yaml"
+      collection: "../postman/fan-ticketing-inventory-api/collections/[Baseline] fan-ticketing-inventory-api"
+    -
+      spec: "../openapi/fan/ticketing-inventory-api.yaml"
+      collection: "../postman/fan-ticketing-inventory-api/collections/[Smoke] fan-ticketing-inventory-api"
+    -
+      spec: "../openapi/fan/ticketing-inventory-api.yaml"
+      collection: "../postman/fan-ticketing-inventory-api/collections/[Contract] fan-ticketing-inventory-api"
+    -
+      spec: "../openapi/football/game-operations-api.yaml"
+      collection: "../postman/football-game-operations-api/collections/[Baseline] football-game-operations-api"
+    -
+      spec: "../openapi/football/game-operations-api.yaml"
+      collection: "../postman/football-game-operations-api/collections/[Smoke] football-game-operations-api"
+    -
+      spec: "../openapi/football/game-operations-api.yaml"
+      collection: "../postman/football-game-operations-api/collections/[Contract] football-game-operations-api"
+    -
+      spec: "../openapi/football/officiating-assignments-api.yaml"
+      collection: "../postman/football-officiating-assignments-api/collections/[Baseline] football-officiating-assignments-api"
+    -
+      spec: "../openapi/football/officiating-assignments-api.yaml"
+      collection: "../postman/football-officiating-assignments-api/collections/[Smoke] football-officiating-assignments-api"
+    -
+      spec: "../openapi/football/officiating-assignments-api.yaml"
+      collection: "../postman/football-officiating-assignments-api/collections/[Contract] football-officiating-assignments-api"
+    -
+      spec: "../openapi/football/player-availability-api.yaml"
+      collection: "../postman/football-player-availability-api/collections/[Baseline] football-player-availability-api"
+    -
+      spec: "../openapi/football/player-availability-api.yaml"
+      collection: "../postman/football-player-availability-api/collections/[Smoke] football-player-availability-api"
+    -
+      spec: "../openapi/football/player-availability-api.yaml"
+      collection: "../postman/football-player-availability-api/collections/[Contract] football-player-availability-api"
+    -
+      spec: "../openapi/football/roster-management-api.yaml"
+      collection: "../postman/football-roster-management-api/collections/[Baseline] football-roster-management-api"
+    -
+      spec: "../openapi/football/roster-management-api.yaml"
+      collection: "../postman/football-roster-management-api/collections/[Smoke] football-roster-management-api"
+    -
+      spec: "../openapi/football/roster-management-api.yaml"
+      collection: "../postman/football-roster-management-api/collections/[Contract] football-roster-management-api"
+    -
+      spec: "../openapi/league/season-schedule-api.yaml"
+      collection: "../postman/league-season-schedule-api/collections/[Baseline] league-season-schedule-api"
+    -
+      spec: "../openapi/league/season-schedule-api.yaml"
+      collection: "../postman/league-season-schedule-api/collections/[Smoke] league-season-schedule-api"
+    -
+      spec: "../openapi/league/season-schedule-api.yaml"
+      collection: "../postman/league-season-schedule-api/collections/[Contract] league-season-schedule-api"
+    -
+      spec: "../openapi/operations/broadcast-coordination-api.yaml"
+      collection: "../postman/operations-broadcast-coordination-api/collections/[Baseline] operations-broadcast-coordination-api"
+    -
+      spec: "../openapi/operations/broadcast-coordination-api.yaml"
+      collection: "../postman/operations-broadcast-coordination-api/collections/[Smoke] operations-broadcast-coordination-api"
+    -
+      spec: "../openapi/operations/broadcast-coordination-api.yaml"
+      collection: "../postman/operations-broadcast-coordination-api/collections/[Contract] operations-broadcast-coordination-api"
+    -
+      spec: "../openapi/operations/venue-operations-api.yaml"
+      collection: "../postman/operations-venue-operations-api/collections/[Baseline] operations-venue-operations-api"
+    -
+      spec: "../openapi/operations/venue-operations-api.yaml"
+      collection: "../postman/operations-venue-operations-api/collections/[Smoke] operations-venue-operations-api"
+    -
+      spec: "../openapi/operations/venue-operations-api.yaml"
+      collection: "../postman/operations-venue-operations-api/collections/[Contract] operations-venue-operations-api"
+    -
+      spec: "../openapi/platform/identity-access-api.yaml"
+      collection: "../postman/platform-identity-access-api/collections/[Baseline] platform-identity-access-api"
+    -
+      spec: "../openapi/platform/identity-access-api.yaml"
+      collection: "../postman/platform-identity-access-api/collections/[Smoke] platform-identity-access-api"
+    -
+      spec: "../openapi/platform/identity-access-api.yaml"
+      collection: "../postman/platform-identity-access-api/collections/[Contract] platform-identity-access-api"
+    -
+      spec: "../openapi/platform/spec-scale-test-api.yaml"
+      collection: "../postman/platform-spec-scale-test-api/collections/[Baseline] platform-spec-scale-test-api"
+    -
+      spec: "../openapi/platform/spec-scale-test-api.yaml"
+      collection: "../postman/platform-spec-scale-test-api/collections/[Smoke] platform-spec-scale-test-api"
+    -
+      spec: "../openapi/platform/spec-scale-test-api.yaml"
+      collection: "../postman/platform-spec-scale-test-api/collections/[Contract] platform-spec-scale-test-api"
+    -
+      spec: "../openapi/platform/stats-distribution-api.yaml"
+      collection: "../postman/platform-stats-distribution-api/collections/[Baseline] platform-stats-distribution-api"
+    -
+      spec: "../openapi/platform/stats-distribution-api.yaml"
+      collection: "../postman/platform-stats-distribution-api/collections/[Smoke] platform-stats-distribution-api"
+    -
+      spec: "../openapi/platform/stats-distribution-api.yaml"
+      collection: "../postman/platform-stats-distribution-api/collections/[Contract] platform-stats-distribution-api"

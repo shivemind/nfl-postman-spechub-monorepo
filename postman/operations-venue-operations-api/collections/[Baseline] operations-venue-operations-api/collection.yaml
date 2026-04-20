@@ -1,0 +1,19 @@
+$schema: https://schema.postman.com/json/draft-2020-12/collection/v3.0.0/
+type: collection
+name: '[Baseline] operations-venue-operations-api'
+description: Fictional internal API for venue gates, parking operations, and security briefing coordination.
+id: 494adb6d-38dc-4285-b61c-c33139396618
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{bearerToken}}'
+      type: string
+variables:
+  - key: baseUrl
+    value: https://stage-api.nfl.example.com/venue-ops
+    type: any
+items:
+  - ref: ./venues/folder.yaml
+  - ref: ./events/folder.yaml
+  - ref: ./parking/folder.yaml

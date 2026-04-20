@@ -1,0 +1,4 @@
+type: folder
+name: security-briefings
+items:
+  - ref: ./Get the latest pre-event security briefing for an event.request.yaml

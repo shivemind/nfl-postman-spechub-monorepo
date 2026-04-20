@@ -1,0 +1,40 @@
+type: http
+name: Record an operational incident or escalation for a game
+url: '{{baseUrl}}/games/:gameId/incident-logs'
+method: POST
+headers:
+  - key: Content-Type
+    value: application/json
+  - key: Accept
+    value: application/json
+pathVariables:
+  - key: gameId
+    value: string
+body:
+  type: json
+  content: |-
+    {
+      "category": "crowd",
+      "severity": "medium",
+      "summary": "string",
+      "reportedBy": "string"
+    }
+examples:
+  - response:
+      statusCode: 201
+      statusText: Created
+      body:
+        type: json
+        content: |-
+          {
+            "category": "weather",
+            "severity": "medium",
+            "summary": "string",
+            "reportedBy": "string",
+            "incidentId": "string",
+            "openedAt": "2006-08-19T03:12:42.861Z"
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Incident created

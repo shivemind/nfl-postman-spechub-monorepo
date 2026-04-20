@@ -1,0 +1,4 @@
+type: folder
+name: players
+items:
+  - ref: ./{playerId}/folder.yaml

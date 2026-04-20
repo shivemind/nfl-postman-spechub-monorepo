@@ -1,0 +1,4 @@
+type: folder
+name: resource-170
+items:
+  - ref: ./Retrieve scale-test payload 170.request.yaml

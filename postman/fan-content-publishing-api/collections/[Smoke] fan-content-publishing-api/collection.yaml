@@ -1,0 +1,19 @@
+$schema: https://schema.postman.com/json/draft-2020-12/collection/v3.0.0/
+type: collection
+name: '[Smoke] fan-content-publishing-api'
+description: Fictional internal API for editorial stories, media assets, and publish workflows.
+id: 0aed0621-1f95-400e-ac59-7ce5ff2dd635
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{bearerToken}}'
+      type: string
+variables:
+  - key: baseUrl
+    value: https://stage-api.nfl.example.com/content
+    type: any
+items:
+  - ref: ./stories/folder.yaml
+  - ref: ./assets/folder.yaml
+  - ref: ./00 - Resolve Secrets.request.yaml

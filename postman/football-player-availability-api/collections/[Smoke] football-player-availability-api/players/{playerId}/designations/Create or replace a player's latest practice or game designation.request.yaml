@@ -1,0 +1,71 @@
+type: http
+name: Create or replace a player's latest practice or game designation
+url: '{{baseUrl}}/players/:playerId/designations'
+method: PUT
+headers:
+  - key: Content-Type
+    value: application/json
+  - key: Accept
+    value: application/json
+pathVariables:
+  - key: playerId
+    value: string
+body:
+  type: json
+  content: |-
+    {
+      "designationType": "game",
+      "status": "questionable",
+      "reason": "string"
+    }
+scripts:
+  - type: afterResponse
+    code:
+      - // [Smoke] Auto-generated test assertions
+      - pm.test('Status code is successful (2xx)', function () {
+      - '    pm.response.to.be.success;'
+      - '});'
+      - pm.test('Response time is acceptable', function () {
+      - '    var threshold = parseInt(pm.environment.get(''RESPONSE_TIME_THRESHOLD'') || ''2000'', 10);'
+      - '    pm.expect(pm.response.responseTime).to.be.below(threshold);'
+      - '});'
+      - pm.test('Response body is not empty', function () {
+      - '    if (pm.response.code !== 204) {'
+      - '        var body = pm.response.text();'
+      - '        pm.expect(body.length).to.be.above(0);'
+      - '    }'
+      - '});'
+    language: text/javascript
+examples:
+  - response:
+      statusCode: 200
+      statusText: OK
+      body:
+        type: json
+        content: |-
+          {
+            "playerId": "string",
+            "designationType": "game",
+            "status": "doubtful",
+            "reason": "string",
+            "updatedAt": "1988-02-10T04:28:06.571Z"
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Designation saved
+  - response:
+      statusCode: 400
+      statusText: Bad Request
+      body:
+        type: json
+        content: |-
+          {
+            "error": "string",
+            "message": "string",
+            "statusCode": 9964
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Invalid request payload

@@ -1,0 +1,4 @@
+type: folder
+name: ad-breaks
+items:
+  - ref: ./Create or replace an ad break plan for a game broadcast.request.yaml

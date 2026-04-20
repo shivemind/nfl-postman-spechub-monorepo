@@ -1,0 +1,4 @@
+type: folder
+name: weeks
+items:
+  - ref: ./{week}/folder.yaml

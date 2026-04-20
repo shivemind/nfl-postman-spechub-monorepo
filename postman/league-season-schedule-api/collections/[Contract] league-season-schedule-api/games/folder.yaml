@@ -1,0 +1,5 @@
+type: folder
+name: games
+items:
+  - ref: ./{gameId}/folder.yaml
+  - ref: ./Search games by season, week, or club.request.yaml

@@ -1,0 +1,19 @@
+$schema: https://schema.postman.com/json/draft-2020-12/collection/v3.0.0/
+type: collection
+name: '[Smoke] football-officiating-assignments-api'
+description: Fictional internal API for officiating crew planning and game-day assignments.
+id: 8f368fc0-98d3-4ee7-894b-68125f8c06a1
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{bearerToken}}'
+      type: string
+variables:
+  - key: baseUrl
+    value: https://stage-api.nfl.example.com/officiating
+    type: any
+items:
+  - ref: ./weeks/folder.yaml
+  - ref: ./games/folder.yaml
+  - ref: ./00 - Resolve Secrets.request.yaml

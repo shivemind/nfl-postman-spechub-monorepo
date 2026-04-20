@@ -1,0 +1,49 @@
+type: http
+name: Get a story draft or published item
+url: '{{baseUrl}}/stories/:storyId'
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+pathVariables:
+  - key: storyId
+    value: string
+examples:
+  - response:
+      statusCode: 200
+      statusText: OK
+      body:
+        type: json
+        content: |-
+          {
+            "headline": "string",
+            "slug": "string",
+            "body": "string",
+            "author": "string",
+            "tags": [
+              "string",
+              "string"
+            ],
+            "storyId": "string",
+            "status": "in-review",
+            "primaryAssetId": "string"
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Story detail
+  - response:
+      statusCode: 404
+      statusText: Not Found
+      body:
+        type: json
+        content: |-
+          {
+            "error": "string",
+            "message": "string",
+            "statusCode": 6186
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Resource not found

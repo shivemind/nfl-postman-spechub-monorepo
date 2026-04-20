@@ -1,0 +1,4 @@
+type: folder
+name: resource-063
+items:
+  - ref: ./Retrieve scale-test payload 063.request.yaml

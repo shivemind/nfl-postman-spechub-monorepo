@@ -1,0 +1,4 @@
+type: folder
+name: '{identityId}'
+items:
+  - ref: ./Get directory and access metadata for an identity.request.yaml

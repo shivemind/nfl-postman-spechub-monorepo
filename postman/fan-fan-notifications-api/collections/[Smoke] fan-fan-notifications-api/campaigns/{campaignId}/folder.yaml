@@ -1,0 +1,4 @@
+type: folder
+name: '{campaignId}'
+items:
+  - ref: ./Get campaign configuration and delivery summary.request.yaml

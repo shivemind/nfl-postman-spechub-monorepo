@@ -1,0 +1,5 @@
+type: folder
+name: '{gameId}'
+items:
+  - ref: ./windows/folder.yaml
+  - ref: ./ad-breaks/folder.yaml

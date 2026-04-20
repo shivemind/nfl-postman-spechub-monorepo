@@ -1,0 +1,5 @@
+type: folder
+name: campaigns
+items:
+  - ref: ./{campaignId}/folder.yaml
+  - ref: ./Create a notification campaign for a club, league, or event audience.request.yaml

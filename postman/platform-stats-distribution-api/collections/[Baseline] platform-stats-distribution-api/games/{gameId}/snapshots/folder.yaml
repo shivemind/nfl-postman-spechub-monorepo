@@ -1,0 +1,4 @@
+type: folder
+name: snapshots
+items:
+  - ref: ./Get the latest normalized game snapshot for downstream consumers.request.yaml

@@ -1,0 +1,44 @@
+type: http
+name: Get scoring and play-count detail for a drive
+url: '{{baseUrl}}/drives/:driveId'
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+pathVariables:
+  - key: driveId
+    value: string
+examples:
+  - response:
+      statusCode: 200
+      statusText: OK
+      body:
+        type: json
+        content: |-
+          {
+            "driveId": "string",
+            "gameId": "string",
+            "offenseClubId": "string",
+            "playCount": 679,
+            "yards": 1797,
+            "result": "punt"
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Drive detail
+  - response:
+      statusCode: 404
+      statusText: Not Found
+      body:
+        type: json
+        content: |-
+          {
+            "error": "string",
+            "message": "string",
+            "statusCode": 8802
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Resource not found

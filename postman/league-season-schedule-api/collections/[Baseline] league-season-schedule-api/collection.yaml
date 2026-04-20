@@ -1,0 +1,18 @@
+$schema: https://schema.postman.com/json/draft-2020-12/collection/v3.0.0/
+type: collection
+name: '[Baseline] league-season-schedule-api'
+description: Fictional internal API for season planning, weekly schedules, and game detail lookups.
+id: 5df84cc4-1d3e-470e-a319-23fc7cf862fd
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{bearerToken}}'
+      type: string
+variables:
+  - key: baseUrl
+    value: https://stage-api.nfl.example.com/schedule
+    type: any
+items:
+  - ref: ./seasons/folder.yaml
+  - ref: ./games/folder.yaml

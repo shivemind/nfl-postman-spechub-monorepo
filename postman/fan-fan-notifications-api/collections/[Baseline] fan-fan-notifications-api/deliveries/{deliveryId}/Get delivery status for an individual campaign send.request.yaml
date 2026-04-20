@@ -1,0 +1,28 @@
+type: http
+name: Get delivery status for an individual campaign send
+url: '{{baseUrl}}/deliveries/:deliveryId'
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+pathVariables:
+  - key: deliveryId
+    value: string
+examples:
+  - response:
+      statusCode: 200
+      statusText: OK
+      body:
+        type: json
+        content: |-
+          {
+            "deliveryId": "string",
+            "campaignId": "string",
+            "status": "failed",
+            "provider": "string",
+            "attemptedAt": "1976-10-11T21:03:37.153Z"
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Delivery detail

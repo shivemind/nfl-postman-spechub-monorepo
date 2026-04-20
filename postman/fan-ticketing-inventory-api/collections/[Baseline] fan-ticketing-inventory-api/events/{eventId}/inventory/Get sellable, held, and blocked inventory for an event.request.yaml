@@ -1,0 +1,28 @@
+type: http
+name: Get sellable, held, and blocked inventory for an event
+url: '{{baseUrl}}/events/:eventId/inventory'
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+pathVariables:
+  - key: eventId
+    value: string
+examples:
+  - response:
+      statusCode: 200
+      statusText: OK
+      body:
+        type: json
+        content: |-
+          {
+            "eventId": "string",
+            "totalSeats": 6405,
+            "availableSeats": 5547,
+            "heldSeats": 5457,
+            "blockedSeats": 2068
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Event inventory snapshot

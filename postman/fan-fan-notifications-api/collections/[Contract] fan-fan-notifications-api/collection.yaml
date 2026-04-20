@@ -1,0 +1,19 @@
+$schema: https://schema.postman.com/json/draft-2020-12/collection/v3.0.0/
+type: collection
+name: '[Contract] fan-fan-notifications-api'
+description: Fictional internal API for campaign setup, audience delivery, and notification tracking.
+id: 3ba19d78-6195-4ae3-83a1-ee1dc34e119a
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{bearerToken}}'
+      type: string
+variables:
+  - key: baseUrl
+    value: https://stage-api.nfl.example.com/notifications
+    type: any
+items:
+  - ref: ./campaigns/folder.yaml
+  - ref: ./deliveries/folder.yaml
+  - ref: ./00 - Resolve Secrets.request.yaml

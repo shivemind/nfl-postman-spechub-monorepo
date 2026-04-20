@@ -1,0 +1,36 @@
+type: http
+name: List direct members of an access group
+url: '{{baseUrl}}/groups/:groupId/members'
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+pathVariables:
+  - key: groupId
+    value: string
+examples:
+  - response:
+      statusCode: 200
+      statusText: OK
+      body:
+        type: json
+        content: |-
+          {
+            "groupId": "string",
+            "members": [
+              {
+                "identityId": "string",
+                "fullName": "string",
+                "role": "string"
+              },
+              {
+                "identityId": "string",
+                "fullName": "string",
+                "role": "string"
+              }
+            ]
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Group members

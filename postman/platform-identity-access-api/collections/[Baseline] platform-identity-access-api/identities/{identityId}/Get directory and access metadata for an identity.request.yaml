@@ -1,0 +1,47 @@
+type: http
+name: Get directory and access metadata for an identity
+url: '{{baseUrl}}/identities/:identityId'
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+pathVariables:
+  - key: identityId
+    value: string
+examples:
+  - response:
+      statusCode: 200
+      statusText: OK
+      body:
+        type: json
+        content: |-
+          {
+            "identityId": "string",
+            "fullName": "string",
+            "email": "zMfCUACIti4zw@EYHmf.rx",
+            "identityType": "contractor",
+            "status": "suspended",
+            "groups": [
+              "string",
+              "string"
+            ]
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Identity detail
+  - response:
+      statusCode: 404
+      statusText: Not Found
+      body:
+        type: json
+        content: |-
+          {
+            "error": "string",
+            "message": "string",
+            "statusCode": 2996
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Resource not found

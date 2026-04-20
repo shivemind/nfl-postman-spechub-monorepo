@@ -1,0 +1,63 @@
+type: http
+name: Get passing leaderboard slices for a season or week
+url: '{{baseUrl}}/leaderboards/passing?season=999&week=999&limit=10'
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+queryParams:
+  - key: season
+    value: '999'
+  - key: week
+    value: '999'
+  - key: limit
+    value: '10'
+scripts:
+  - type: afterResponse
+    code:
+      - // [Smoke] Auto-generated test assertions
+      - pm.test('Status code is successful (2xx)', function () {
+      - '    pm.response.to.be.success;'
+      - '});'
+      - pm.test('Response time is acceptable', function () {
+      - '    var threshold = parseInt(pm.environment.get(''RESPONSE_TIME_THRESHOLD'') || ''2000'', 10);'
+      - '    pm.expect(pm.response.responseTime).to.be.below(threshold);'
+      - '});'
+      - pm.test('Response body is not empty', function () {
+      - '    if (pm.response.code !== 204) {'
+      - '        var body = pm.response.text();'
+      - '        pm.expect(body.length).to.be.above(0);'
+      - '    }'
+      - '});'
+    language: text/javascript
+examples:
+  - response:
+      statusCode: 200
+      statusText: OK
+      body:
+        type: json
+        content: |-
+          {
+            "data": [
+              {
+                "playerId": "string",
+                "fullName": "string",
+                "clubId": "string",
+                "passingYards": 5914,
+                "passingTouchdowns": 8898,
+                "interceptions": 3838
+              },
+              {
+                "playerId": "string",
+                "fullName": "string",
+                "clubId": "string",
+                "passingYards": 5648,
+                "passingTouchdowns": 3135,
+                "interceptions": 8803
+              }
+            ]
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Passing leaders

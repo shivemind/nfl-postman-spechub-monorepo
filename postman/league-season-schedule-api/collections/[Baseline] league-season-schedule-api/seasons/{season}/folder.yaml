@@ -1,0 +1,4 @@
+type: folder
+name: '{season}'
+items:
+  - ref: ./weeks/folder.yaml

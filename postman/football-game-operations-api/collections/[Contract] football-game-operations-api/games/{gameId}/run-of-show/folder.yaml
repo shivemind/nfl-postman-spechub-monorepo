@@ -1,0 +1,5 @@
+type: folder
+name: run-of-show
+items:
+  - ref: ./Get scheduled operational milestones for a game.request.yaml
+  - ref: ./Update milestone timestamps or status for a game.request.yaml

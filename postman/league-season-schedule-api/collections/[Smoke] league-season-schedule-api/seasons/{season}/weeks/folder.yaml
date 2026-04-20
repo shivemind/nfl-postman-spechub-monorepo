@@ -1,0 +1,4 @@
+type: folder
+name: weeks
+items:
+  - ref: ./List weekly schedule blocks for a season.request.yaml

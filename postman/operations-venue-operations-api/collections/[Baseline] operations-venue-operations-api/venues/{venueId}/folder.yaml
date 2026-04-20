@@ -1,0 +1,4 @@
+type: folder
+name: '{venueId}'
+items:
+  - ref: ./gates/folder.yaml

@@ -1,4 +1,188 @@
 {
-  "workspaceId": "",
-  "specs": {}
+  "specs": {
+    "openapi/fan/content-publishing-api.yaml": {
+      "baselineCollectionId": "52400725-5f6d1406-640b-4089-b302-864dee7f5235",
+      "contractCollectionId": "52400725-5d80b1d3-d36a-4053-9b16-b9f348a19851",
+      "environmentUids": {
+        "prod": "52400725-64eaf56e-48e3-49e6-b28f-f59e61bebbb2"
+      },
+      "mockUrl": "https://831f7465-58ec-40d5-945f-1149081e375a.mock.pstmn.io",
+      "monitorId": "52400725-1f13cf38-1354-4ef0-b90e-b6b4fa0da7d3",
+      "projectName": "fan-content-publishing-api",
+      "smokeCollectionId": "52400725-0aed0621-1f95-400e-ac59-7ce5ff2dd635",
+      "specId": "623171e8-ee0b-4826-9393-839a8f42375f",
+      "specSha256": "4d236dccdadd1ad67f34ed2d8044e86303d8ee0b3aa25201fe881b91e95a112c",
+      "workspaceId": "a02d21e9-d3ef-4175-8fa9-b04a6a116de2"
+    },
+    "openapi/fan/fan-notifications-api.yaml": {
+      "baselineCollectionId": "52400725-a7e0d2ae-c0ce-4410-93d8-b3d9aa519c03",
+      "contractCollectionId": "52400725-3ba19d78-6195-4ae3-83a1-ee1dc34e119a",
+      "environmentUids": {
+        "prod": "52400725-6d10c1eb-114a-429a-9eb4-5d2009898e4b"
+      },
+      "mockUrl": "https://266dff27-bced-4803-ad32-77a6d5f8a849.mock.pstmn.io",
+      "monitorId": "52400725-1f13cf3a-0eb2-4300-b147-a305dc502a6a",
+      "projectName": "fan-fan-notifications-api",
+      "smokeCollectionId": "52400725-5b829844-f259-4df6-a1ad-4d890b02294b",
+      "specId": "77c14202-f9d7-4e47-8e3f-8910259597ce",
+      "specSha256": "714f067eb824cab01677d817d4adfdae6bc83d7b51d2cb0a07258ca85c64a133",
+      "workspaceId": "a02d21e9-d3ef-4175-8fa9-b04a6a116de2"
+    },
+    "openapi/fan/ticketing-inventory-api.yaml": {
+      "baselineCollectionId": "52400725-d88dc4f3-a05e-4691-bd7a-ad8cc3f9ac4d",
+      "contractCollectionId": "52400725-cbe156cc-942e-48f3-bf15-f9b8d4c6c6e3",
+      "environmentUids": {
+        "prod": "52400725-560ef763-4329-4cda-b7ff-2ca9c276d756"
+      },
+      "mockUrl": "https://9cc474d4-f35f-4e64-8ffb-72a47f7e0d31.mock.pstmn.io",
+      "monitorId": "52400725-1f13cf3c-86aa-4db0-9296-d315b5c45169",
+      "projectName": "fan-ticketing-inventory-api",
+      "smokeCollectionId": "52400725-08e2fc45-e842-42d1-b876-94e5b18d3021",
+      "specId": "566c9ee0-7fbb-4329-a11a-37dcb96a652e",
+      "specSha256": "a4869bc701afa856df45ddbf1826ec7ef055cc88673aa7b320ee6f7bd09b1e54",
+      "workspaceId": "a02d21e9-d3ef-4175-8fa9-b04a6a116de2"
+    },
+    "openapi/football/game-operations-api.yaml": {
+      "baselineCollectionId": "52400725-2a9aa834-5b4e-489e-b1d4-412b26ba0d3a",
+      "contractCollectionId": "52400725-2f9aaf8f-c0fc-4173-978d-efa8509b7d42",
+      "environmentUids": {
+        "prod": "52400725-6a6f5c99-78a0-4c03-9e54-9ccb109e40da"
+      },
+      "mockUrl": "https://577f153d-6016-4122-8a56-4642fde6c979.mock.pstmn.io",
+      "monitorId": "52400725-1f13cf3e-6e54-42a0-810e-9a57a4c288a2",
+      "projectName": "football-game-operations-api",
+      "smokeCollectionId": "52400725-162ddd6b-994c-4330-9925-983c3418cbde",
+      "specId": "65228db5-88e9-4873-a2ee-131351facb9a",
+      "specSha256": "69e87dc685d64285db61c6619b806db10aaf959a9b76ddc60175ae7a252a593d",
+      "workspaceId": "a02d21e9-d3ef-4175-8fa9-b04a6a116de2"
+    },
+    "openapi/football/officiating-assignments-api.yaml": {
+      "baselineCollectionId": "52400725-bdd96131-503b-4bfa-9888-4304d6e77553",
+      "contractCollectionId": "52400725-2cafc1d8-73bc-42cd-9cdb-6a1e0dbba0cd",
+      "environmentUids": {
+        "prod": "52400725-7b2dd288-9dd5-4e8b-bd1a-92fc258d58c8"
+      },
+      "mockUrl": "https://6d61d990-d904-4af0-9c9f-5e935986793e.mock.pstmn.io",
+      "monitorId": "52400725-1f13cf40-5387-4970-a751-0ea8b35b53f2",
+      "projectName": "football-officiating-assignments-api",
+      "smokeCollectionId": "52400725-8f368fc0-98d3-4ee7-894b-68125f8c06a1",
+      "specId": "295ba131-f005-4185-88e0-a7aefde6216f",
+      "specSha256": "3eb387f0d56f153cedb4e726ca1321da89c6588a609343ba8ef0e72d61982504",
+      "workspaceId": "a02d21e9-d3ef-4175-8fa9-b04a6a116de2"
+    },
+    "openapi/football/player-availability-api.yaml": {
+      "baselineCollectionId": "52400725-b4afa716-6fb7-4d08-80de-506a83d8d1e5",
+      "contractCollectionId": "52400725-643425ab-21da-4e91-8f3c-affc96065d18",
+      "environmentUids": {
+        "prod": "52400725-6612b1a4-109e-4b52-a5b8-ea9d5847f173"
+      },
+      "mockUrl": "https://6bc4932e-5e75-4a1a-9447-282b1cc7857f.mock.pstmn.io",
+      "monitorId": "52400725-1f13cf42-630d-4fa0-b22f-2521d562c413",
+      "projectName": "football-player-availability-api",
+      "smokeCollectionId": "52400725-971251db-c0d6-4a65-b530-1be0972ec27f",
+      "specId": "2e22e009-3403-44c7-bd89-22b6ba99fb06",
+      "specSha256": "e4881d3ab91fcbb99e755bd1546ff6abbe56ffce02ce1a45fbd81079eb3d83cf",
+      "workspaceId": "a02d21e9-d3ef-4175-8fa9-b04a6a116de2"
+    },
+    "openapi/football/roster-management-api.yaml": {
+      "baselineCollectionId": "52400725-ee1cf636-4b68-4f7b-b52a-30233be9cca8",
+      "contractCollectionId": "52400725-c7b71958-3105-46f6-8e64-ddb93d249d71",
+      "environmentUids": {
+        "prod": "52400725-75f43ff2-1b29-4f44-a472-725cf87cf326"
+      },
+      "mockUrl": "https://6c2abb2b-9b63-4676-835f-6111f40c7ba6.mock.pstmn.io",
+      "monitorId": "52400725-1f13cf44-8b69-4c90-874a-a05150b4c057",
+      "projectName": "football-roster-management-api",
+      "smokeCollectionId": "52400725-0e23ea7b-fde0-49b3-825f-7ee6e48dd9d8",
+      "specId": "7a08aa44-19a5-42e7-8095-de28830256bc",
+      "specSha256": "12222fe85ee02bcdd2c8e2ab831196aa6e090219be3af3b4619fd52e7da409de",
+      "workspaceId": "a02d21e9-d3ef-4175-8fa9-b04a6a116de2"
+    },
+    "openapi/league/season-schedule-api.yaml": {
+      "baselineCollectionId": "52400725-5df84cc4-1d3e-470e-a319-23fc7cf862fd",
+      "contractCollectionId": "52400725-f8e6ba30-7627-49e5-98f7-6115f72d2785",
+      "environmentUids": {
+        "prod": "52400725-8a2c3e95-9714-4e34-84e7-1b6b02eff12c"
+      },
+      "mockUrl": "https://3ce20819-3baf-409b-850d-cae7c64a2ba5.mock.pstmn.io",
+      "monitorId": "52400725-1f13cf47-33d9-4ae0-a64c-719d31f0ce31",
+      "projectName": "league-season-schedule-api",
+      "smokeCollectionId": "52400725-220ef771-b443-4bd1-ad34-e935634e4309",
+      "specId": "85da766e-c35c-4c37-80f5-29df2316d9a8",
+      "specSha256": "370d71b40f3b4630f4250d205973dec4ac1228d4b45dfe7e743944ce49369167",
+      "workspaceId": "a02d21e9-d3ef-4175-8fa9-b04a6a116de2"
+    },
+    "openapi/operations/broadcast-coordination-api.yaml": {
+      "baselineCollectionId": "52400725-4e0ac42e-349f-4f14-978a-c300c6c45c77",
+      "contractCollectionId": "52400725-a2036eb4-f817-4e0e-ab2a-033b8d3a8553",
+      "environmentUids": {
+        "prod": "52400725-0d1cf3f6-02ee-4606-8093-963d87422965"
+      },
+      "mockUrl": "https://aad6926e-6a56-4ef8-b5cc-60aa6f4a0df0.mock.pstmn.io",
+      "monitorId": "52400725-1f13cf49-53eb-4e80-a937-8163e8c2e0dd",
+      "projectName": "operations-broadcast-coordination-api",
+      "smokeCollectionId": "52400725-78dc2c18-d600-4d91-8f2b-e1a8cf9d2270",
+      "specId": "1b4771de-0b24-402f-8056-09f361d8391d",
+      "specSha256": "d83c061f9e9ddf731ca1652d2c47f59ee2f2d08ff2bbe4d24c80d4d54feae581",
+      "workspaceId": "a02d21e9-d3ef-4175-8fa9-b04a6a116de2"
+    },
+    "openapi/operations/venue-operations-api.yaml": {
+      "baselineCollectionId": "52400725-494adb6d-38dc-4285-b61c-c33139396618",
+      "contractCollectionId": "52400725-61780ca3-352d-4ed9-82f6-2e65c17432b1",
+      "environmentUids": {
+        "prod": "52400725-d6ab6786-a10f-4ba0-b0e7-7cdcf5bbc379"
+      },
+      "mockUrl": "https://1f16e900-1517-40fc-a265-d98f772826c9.mock.pstmn.io",
+      "monitorId": "52400725-1f13cf4b-4006-4e90-9e96-6dfcd2135a0a",
+      "projectName": "operations-venue-operations-api",
+      "smokeCollectionId": "52400725-8882b614-95d9-426f-9fba-9caa4326347b",
+      "specId": "109756ed-b8df-47b6-9168-2f023ab98258",
+      "specSha256": "d8d6dd572832b5311c3afc5b54a23d90dca6fea5e86af7dad7aa94fbc1c23c53",
+      "workspaceId": "a02d21e9-d3ef-4175-8fa9-b04a6a116de2"
+    },
+    "openapi/platform/identity-access-api.yaml": {
+      "baselineCollectionId": "52400725-2d6645b3-a15b-49cb-aed2-9708f2478006",
+      "contractCollectionId": "52400725-402c8fbe-24fd-4940-9b0b-574ecd823329",
+      "environmentUids": {
+        "prod": "52400725-8cc14c27-b105-4bcf-99e4-b2ce0e8174e7"
+      },
+      "mockUrl": "https://18b0caac-5e55-4636-9cf6-14f13a7e06d6.mock.pstmn.io",
+      "monitorId": "52400725-1f13cf4d-76ce-4200-a143-9adac695dc1a",
+      "projectName": "platform-identity-access-api",
+      "smokeCollectionId": "52400725-68c68bd1-787e-4821-9ddb-fc486f01942e",
+      "specId": "654d272a-08ed-4b42-95b9-2da9d6143231",
+      "specSha256": "3faebde361701229a1aad4ec73a119d73d5344894f74111be6782b3b959ea52a",
+      "workspaceId": "a02d21e9-d3ef-4175-8fa9-b04a6a116de2"
+    },
+    "openapi/platform/spec-scale-test-api.yaml": {
+      "baselineCollectionId": "52400725-f45474d4-4e47-4f50-9f7e-34981439fda0",
+      "contractCollectionId": "52400725-b735257c-7b90-4f2a-ac2d-7b47988985bc",
+      "environmentUids": {
+        "prod": "52400725-10092449-1960-47d9-96c5-69ae3d531a38"
+      },
+      "mockUrl": "https://abd6ccd3-a0ee-429f-a58d-0b7854fad2c6.mock.pstmn.io",
+      "monitorId": "52400725-1f13cf50-a768-46b0-ae15-c78997a35934",
+      "projectName": "platform-spec-scale-test-api",
+      "smokeCollectionId": "52400725-e2895dcc-fb32-448e-8ca7-8216b7041bba",
+      "specId": "f2b26c52-4c59-413c-91c1-b060300106f8",
+      "specSha256": "10440149b0113c343bec406efa22fdc286d34917a078dbecb4dd54d513389219",
+      "workspaceId": "a02d21e9-d3ef-4175-8fa9-b04a6a116de2"
+    },
+    "openapi/platform/stats-distribution-api.yaml": {
+      "baselineCollectionId": "52400725-e51f9c59-cfab-4859-8c87-0da1cc6615d7",
+      "contractCollectionId": "52400725-d1542573-4139-4356-b8e4-c804c93f4717",
+      "environmentUids": {
+        "prod": "52400725-94124bf2-f051-4a9a-a891-8c2552a980cb"
+      },
+      "mockUrl": "https://97a6980d-a583-4236-9176-d0c5592bde1d.mock.pstmn.io",
+      "monitorId": "52400725-1f13cf53-7805-4f50-b75c-17eb0b83bd72",
+      "projectName": "platform-stats-distribution-api",
+      "smokeCollectionId": "52400725-d26ceacd-3cfa-4de5-842c-fe0f8a46a288",
+      "specId": "a1f4c739-1c9e-43b4-95cc-fd89ed3669e7",
+      "specSha256": "a0b4831411edae66173c78b8bed056522a4197d4503c03ed5af0d4fc32cb7f2d",
+      "workspaceId": "a02d21e9-d3ef-4175-8fa9-b04a6a116de2"
+    }
+  },
+  "updatedAt": "2026-04-20T20:12:46.354Z",
+  "workspaceId": "a02d21e9-d3ef-4175-8fa9-b04a6a116de2"
 }

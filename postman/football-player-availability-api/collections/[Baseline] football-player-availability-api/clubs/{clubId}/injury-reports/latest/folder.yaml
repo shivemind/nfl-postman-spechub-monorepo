@@ -1,0 +1,4 @@
+type: folder
+name: latest
+items:
+  - ref: ./Get the most recent league-formatted injury report for a club.request.yaml

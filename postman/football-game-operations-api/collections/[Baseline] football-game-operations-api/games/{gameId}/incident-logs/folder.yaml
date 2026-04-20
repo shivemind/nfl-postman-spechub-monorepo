@@ -1,0 +1,4 @@
+type: folder
+name: incident-logs
+items:
+  - ref: ./Record an operational incident or escalation for a game.request.yaml

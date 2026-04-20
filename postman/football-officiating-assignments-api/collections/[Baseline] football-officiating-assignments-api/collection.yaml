@@ -1,0 +1,18 @@
+$schema: https://schema.postman.com/json/draft-2020-12/collection/v3.0.0/
+type: collection
+name: '[Baseline] football-officiating-assignments-api'
+description: Fictional internal API for officiating crew planning and game-day assignments.
+id: bdd96131-503b-4bfa-9888-4304d6e77553
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{bearerToken}}'
+      type: string
+variables:
+  - key: baseUrl
+    value: https://stage-api.nfl.example.com/officiating
+    type: any
+items:
+  - ref: ./weeks/folder.yaml
+  - ref: ./games/folder.yaml

@@ -1,0 +1,45 @@
+type: http
+name: Get passing leaderboard slices for a season or week
+url: '{{baseUrl}}/leaderboards/passing?season=2329&week=2329&limit=10'
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+queryParams:
+  - key: season
+    value: '2329'
+  - key: week
+    value: '2329'
+  - key: limit
+    value: '10'
+examples:
+  - response:
+      statusCode: 200
+      statusText: OK
+      body:
+        type: json
+        content: |-
+          {
+            "data": [
+              {
+                "playerId": "string",
+                "fullName": "string",
+                "clubId": "string",
+                "passingYards": 8391,
+                "passingTouchdowns": 7572,
+                "interceptions": 9083
+              },
+              {
+                "playerId": "string",
+                "fullName": "string",
+                "clubId": "string",
+                "passingYards": 1190,
+                "passingTouchdowns": 6088,
+                "interceptions": 2325
+              }
+            ]
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Passing leaders

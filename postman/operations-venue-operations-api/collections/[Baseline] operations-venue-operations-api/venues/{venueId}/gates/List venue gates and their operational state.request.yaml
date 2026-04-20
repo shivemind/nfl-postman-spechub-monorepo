@@ -1,0 +1,38 @@
+type: http
+name: List venue gates and their operational state
+url: '{{baseUrl}}/venues/:venueId/gates'
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+pathVariables:
+  - key: venueId
+    value: string
+examples:
+  - response:
+      statusCode: 200
+      statusText: OK
+      body:
+        type: json
+        content: |-
+          {
+            "venueId": "string",
+            "gates": [
+              {
+                "gateId": "string",
+                "label": "string",
+                "status": "staffing",
+                "ingressType": "staff"
+              },
+              {
+                "gateId": "string",
+                "label": "string",
+                "status": "open",
+                "ingressType": "team"
+              }
+            ]
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Venue gates

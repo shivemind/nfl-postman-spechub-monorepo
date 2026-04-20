@@ -1,0 +1,19 @@
+$schema: https://schema.postman.com/json/draft-2020-12/collection/v3.0.0/
+type: collection
+name: '[Smoke] league-season-schedule-api'
+description: Fictional internal API for season planning, weekly schedules, and game detail lookups.
+id: 220ef771-b443-4bd1-ad34-e935634e4309
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{bearerToken}}'
+      type: string
+variables:
+  - key: baseUrl
+    value: https://stage-api.nfl.example.com/schedule
+    type: any
+items:
+  - ref: ./seasons/folder.yaml
+  - ref: ./games/folder.yaml
+  - ref: ./00 - Resolve Secrets.request.yaml

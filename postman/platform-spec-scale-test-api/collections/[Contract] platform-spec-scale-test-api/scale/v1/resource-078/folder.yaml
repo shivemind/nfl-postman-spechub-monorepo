@@ -1,0 +1,4 @@
+type: folder
+name: resource-078
+items:
+  - ref: ./Retrieve scale-test payload 078.request.yaml

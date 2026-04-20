@@ -1,0 +1,5 @@
+type: folder
+name: stories
+items:
+  - ref: ./{storyId}/folder.yaml
+  - ref: ./Create a new editorial story draft.request.yaml

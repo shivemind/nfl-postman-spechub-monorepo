@@ -1,0 +1,18 @@
+$schema: https://schema.postman.com/json/draft-2020-12/collection/v3.0.0/
+type: collection
+name: '[Baseline] operations-broadcast-coordination-api'
+description: Fictional internal API for game windows, feed health, and commercial break planning.
+id: 4e0ac42e-349f-4f14-978a-c300c6c45c77
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{bearerToken}}'
+      type: string
+variables:
+  - key: baseUrl
+    value: https://stage-api.nfl.example.com/broadcast
+    type: any
+items:
+  - ref: ./games/folder.yaml
+  - ref: ./feeds/folder.yaml

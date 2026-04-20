@@ -1,0 +1,4 @@
+type: folder
+name: service-accounts
+items:
+  - ref: ./Provision a service account for an internal platform or integration.request.yaml

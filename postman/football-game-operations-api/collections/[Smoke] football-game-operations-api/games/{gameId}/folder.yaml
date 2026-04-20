@@ -1,0 +1,5 @@
+type: folder
+name: '{gameId}'
+items:
+  - ref: ./run-of-show/folder.yaml
+  - ref: ./incident-logs/folder.yaml

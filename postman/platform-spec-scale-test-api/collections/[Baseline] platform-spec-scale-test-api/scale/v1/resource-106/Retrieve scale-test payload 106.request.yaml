@@ -1,0 +1,78 @@
+type: http
+name: Retrieve scale-test payload 106
+url: '{{baseUrl}}/scale/v1/resource-106?includeMetadata=true'
+method: GET
+headers:
+  - key: traceId
+    value: string
+  - key: Accept
+    value: application/json
+queryParams:
+  - key: includeMetadata
+    value: 'true'
+examples:
+  - response:
+      statusCode: 200
+      statusText: OK
+      body:
+        type: json
+        content: |-
+          {
+            "resourceId": "scale-106",
+            "displayName": "NFL Scale Resource 106",
+            "status": "active",
+            "includeMetadata": true,
+            "metadata": {
+              "partition": "scale-5",
+              "ordinal": 106
+            }
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Successful lookup for scale-106
+  - response:
+      statusCode: 400
+      statusText: Bad Request
+      body:
+        type: json
+        content: |-
+          {
+            "error": "string",
+            "message": "string",
+            "statusCode": 2841
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Invalid request parameters
+  - response:
+      statusCode: 429
+      statusText: Too Many Requests
+      body:
+        type: json
+        content: |-
+          {
+            "error": "string",
+            "message": "string",
+            "statusCode": 2841
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Rate limit exceeded
+  - response:
+      statusCode: 500
+      statusText: Internal Server Error
+      body:
+        type: json
+        content: |-
+          {
+            "error": "string",
+            "message": "string",
+            "statusCode": 2841
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Internal platform error

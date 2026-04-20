@@ -1,0 +1,20 @@
+$schema: https://schema.postman.com/json/draft-2020-12/collection/v3.0.0/
+type: collection
+name: '[Contract] platform-stats-distribution-api'
+description: Fictional internal API for downstream game snapshots, drive detail, and passing leaderboards.
+id: d1542573-4139-4356-b8e4-c804c93f4717
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{bearerToken}}'
+      type: string
+variables:
+  - key: baseUrl
+    value: https://stage-api.nfl.example.com/stats
+    type: any
+items:
+  - ref: ./games/folder.yaml
+  - ref: ./drives/folder.yaml
+  - ref: ./leaderboards/folder.yaml
+  - ref: ./00 - Resolve Secrets.request.yaml

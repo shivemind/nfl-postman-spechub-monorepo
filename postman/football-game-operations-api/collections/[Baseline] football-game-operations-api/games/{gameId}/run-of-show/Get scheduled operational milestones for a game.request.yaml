@@ -1,0 +1,41 @@
+type: http
+name: Get scheduled operational milestones for a game
+url: '{{baseUrl}}/games/:gameId/run-of-show'
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+pathVariables:
+  - key: gameId
+    value: string
+examples:
+  - response:
+      statusCode: 200
+      statusText: OK
+      body:
+        type: json
+        content: |-
+          {
+            "gameId": "string",
+            "milestones": [
+              {
+                "code": "string",
+                "label": "string",
+                "status": "delayed",
+                "scheduledAt": "1999-09-09T01:41:01.298Z",
+                "actualAt": "1952-04-26T16:45:29.055Z"
+              },
+              {
+                "code": "string",
+                "label": "string",
+                "status": "complete",
+                "scheduledAt": "1962-03-10T16:28:26.437Z",
+                "actualAt": "1960-01-15T01:51:52.015Z"
+              }
+            ],
+            "operationsLead": "string"
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Run of show

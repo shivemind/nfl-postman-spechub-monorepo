@@ -1,0 +1,40 @@
+type: http
+name: List officiating crews available for a given week
+url: '{{baseUrl}}/weeks/:week/crews?season=5982'
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+queryParams:
+  - key: season
+    value: '5982'
+pathVariables:
+  - key: week
+    value: '15'
+examples:
+  - response:
+      statusCode: 200
+      statusText: OK
+      body:
+        type: json
+        content: |-
+          {
+            "data": [
+              {
+                "crewId": "string",
+                "refereeName": "string",
+                "homeRegion": "string",
+                "travelStatus": "unavailable"
+              },
+              {
+                "crewId": "string",
+                "refereeName": "string",
+                "homeRegion": "string",
+                "travelStatus": "unavailable"
+              }
+            ]
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Weekly crew list

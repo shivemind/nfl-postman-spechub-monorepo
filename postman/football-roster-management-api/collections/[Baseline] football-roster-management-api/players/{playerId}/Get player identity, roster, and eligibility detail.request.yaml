@@ -1,0 +1,50 @@
+type: http
+name: Get player identity, roster, and eligibility detail
+url: '{{baseUrl}}/players/:playerId'
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+pathVariables:
+  - key: playerId
+    value: string
+examples:
+  - response:
+      statusCode: 200
+      statusText: OK
+      body:
+        type: json
+        content: |-
+          {
+            "playerId": "string",
+            "fullName": "string",
+            "jerseyNumber": 5783,
+            "position": "string",
+            "rosterStatus": "reserve",
+            "clubId": "string",
+            "experienceSeasons": 9994,
+            "college": "string",
+            "eligibilityFlags": [
+              "string",
+              "string"
+            ]
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Player profile
+  - response:
+      statusCode: 404
+      statusText: Not Found
+      body:
+        type: json
+        content: |-
+          {
+            "error": "string",
+            "message": "string",
+            "statusCode": 2942
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Resource not found

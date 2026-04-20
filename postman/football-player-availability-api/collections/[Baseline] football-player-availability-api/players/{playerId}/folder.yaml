@@ -1,0 +1,4 @@
+type: folder
+name: '{playerId}'
+items:
+  - ref: ./designations/folder.yaml

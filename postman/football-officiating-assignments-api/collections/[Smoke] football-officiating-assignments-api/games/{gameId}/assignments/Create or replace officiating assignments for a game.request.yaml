@@ -1,0 +1,95 @@
+type: http
+name: Create or replace officiating assignments for a game
+url: '{{baseUrl}}/games/:gameId/assignments'
+method: POST
+headers:
+  - key: Content-Type
+    value: application/json
+  - key: Accept
+    value: application/json
+pathVariables:
+  - key: gameId
+    value: string
+body:
+  type: json
+  content: |-
+    {
+      "crewId": "string",
+      "assignments": [
+        {
+          "officialId": "string",
+          "fullName": "string",
+          "position": "down-judge",
+          "alternate": false
+        },
+        {
+          "officialId": "string",
+          "fullName": "string",
+          "position": "back-judge",
+          "alternate": false
+        }
+      ],
+      "notes": "string"
+    }
+scripts:
+  - type: afterResponse
+    code:
+      - // [Smoke] Auto-generated test assertions
+      - pm.test('Status code is successful (2xx)', function () {
+      - '    pm.response.to.be.success;'
+      - '});'
+      - pm.test('Response time is acceptable', function () {
+      - '    var threshold = parseInt(pm.environment.get(''RESPONSE_TIME_THRESHOLD'') || ''2000'', 10);'
+      - '    pm.expect(pm.response.responseTime).to.be.below(threshold);'
+      - '});'
+      - pm.test('Response body is not empty', function () {
+      - '    if (pm.response.code !== 204) {'
+      - '        var body = pm.response.text();'
+      - '        pm.expect(body.length).to.be.above(0);'
+      - '    }'
+      - '});'
+    language: text/javascript
+examples:
+  - response:
+      statusCode: 200
+      statusText: OK
+      body:
+        type: json
+        content: |-
+          {
+            "crewId": "string",
+            "assignments": [
+              {
+                "officialId": "string",
+                "fullName": "string",
+                "position": "down-judge",
+                "alternate": false
+              },
+              {
+                "officialId": "string",
+                "fullName": "string",
+                "position": "back-judge",
+                "alternate": false
+              }
+            ],
+            "notes": "string"
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Assignments saved
+  - response:
+      statusCode: 400
+      statusText: Bad Request
+      body:
+        type: json
+        content: |-
+          {
+            "error": "string",
+            "message": "string",
+            "statusCode": 9767
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Invalid request payload

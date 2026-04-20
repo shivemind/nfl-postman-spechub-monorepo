@@ -1,0 +1,4 @@
+type: folder
+name: availability
+items:
+  - ref: ./Get official game status designations for both clubs in a game.request.yaml

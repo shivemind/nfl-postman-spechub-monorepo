@@ -1,0 +1,4 @@
+type: folder
+name: injury-reports
+items:
+  - ref: ./latest/folder.yaml

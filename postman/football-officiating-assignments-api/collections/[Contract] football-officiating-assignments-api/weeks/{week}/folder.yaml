@@ -1,0 +1,4 @@
+type: folder
+name: '{week}'
+items:
+  - ref: ./crews/folder.yaml

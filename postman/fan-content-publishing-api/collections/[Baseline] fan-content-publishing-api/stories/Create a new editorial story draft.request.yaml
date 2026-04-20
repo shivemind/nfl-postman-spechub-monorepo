@@ -1,0 +1,46 @@
+type: http
+name: Create a new editorial story draft
+url: '{{baseUrl}}/stories'
+method: POST
+headers:
+  - key: Content-Type
+    value: application/json
+  - key: Accept
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "headline": "string",
+      "slug": "string",
+      "body": "string",
+      "author": "string",
+      "tags": [
+        "string",
+        "string"
+      ]
+    }
+examples:
+  - response:
+      statusCode: 201
+      statusText: Created
+      body:
+        type: json
+        content: |-
+          {
+            "headline": "string",
+            "slug": "string",
+            "body": "string",
+            "author": "string",
+            "tags": [
+              "string",
+              "string"
+            ],
+            "storyId": "string",
+            "status": "in-review",
+            "primaryAssetId": "string"
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Story created

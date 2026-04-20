@@ -1,0 +1,17 @@
+$schema: https://schema.postman.com/json/draft-2020-12/collection/v3.0.0/
+type: collection
+name: '[Baseline] football-game-operations-api'
+description: Fictional internal API for run-of-show tracking, status updates, and incident logging.
+id: 2a9aa834-5b4e-489e-b1d4-412b26ba0d3a
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{bearerToken}}'
+      type: string
+variables:
+  - key: baseUrl
+    value: https://stage-api.nfl.example.com/game-ops
+    type: any
+items:
+  - ref: ./games/folder.yaml

@@ -1,0 +1,38 @@
+type: http
+name: Publish a story to configured destinations
+url: '{{baseUrl}}/stories/:storyId/publish'
+method: POST
+headers:
+  - key: Content-Type
+    value: application/json
+  - key: Accept
+    value: application/json
+pathVariables:
+  - key: storyId
+    value: string
+body:
+  type: json
+  content: |-
+    {
+      "destinations": [
+        "mobile",
+        "mobile"
+      ],
+      "publishAt": "1978-07-18T13:01:31.254Z"
+    }
+examples:
+  - response:
+      statusCode: 202
+      statusText: Accepted
+      body:
+        type: json
+        content: |-
+          {
+            "jobId": "string",
+            "storyId": "string",
+            "status": "queued"
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Publish job accepted

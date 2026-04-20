@@ -1,0 +1,54 @@
+type: http
+name: List weekly schedule blocks for a season
+url: '{{baseUrl}}/seasons/:season/weeks'
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+pathVariables:
+  - key: season
+    value: '6591'
+examples:
+  - response:
+      statusCode: 200
+      statusText: OK
+      body:
+        type: json
+        content: |-
+          {
+            "data": [
+              {
+                "season": 8520,
+                "week": 5251,
+                "startDate": "1955-04-15",
+                "endDate": "1999-05-07",
+                "phase": "regular"
+              },
+              {
+                "season": 544,
+                "week": 9596,
+                "startDate": "1992-01-09",
+                "endDate": "1981-02-08",
+                "phase": "postseason"
+              }
+            ]
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Weekly schedule blocks
+  - response:
+      statusCode: 404
+      statusText: Not Found
+      body:
+        type: json
+        content: |-
+          {
+            "error": "string",
+            "message": "string",
+            "statusCode": 6470
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Resource not found

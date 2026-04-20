@@ -1,0 +1,19 @@
+$schema: https://schema.postman.com/json/draft-2020-12/collection/v3.0.0/
+type: collection
+name: '[Contract] fan-ticketing-inventory-api'
+description: Fictional internal API for event inventory, seat holds, and order lookup workflows.
+id: cbe156cc-942e-48f3-bf15-f9b8d4c6c6e3
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{bearerToken}}'
+      type: string
+variables:
+  - key: baseUrl
+    value: https://stage-api.nfl.example.com/ticketing
+    type: any
+items:
+  - ref: ./events/folder.yaml
+  - ref: ./orders/folder.yaml
+  - ref: ./00 - Resolve Secrets.request.yaml

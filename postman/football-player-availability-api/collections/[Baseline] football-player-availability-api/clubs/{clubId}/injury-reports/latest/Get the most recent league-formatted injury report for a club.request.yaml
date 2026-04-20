@@ -1,0 +1,40 @@
+type: http
+name: Get the most recent league-formatted injury report for a club
+url: '{{baseUrl}}/clubs/:clubId/injury-reports/latest'
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+pathVariables:
+  - key: clubId
+    value: string
+examples:
+  - response:
+      statusCode: 200
+      statusText: OK
+      body:
+        type: json
+        content: |-
+          {
+            "clubId": "string",
+            "reportDate": "1962-11-02",
+            "entries": [
+              {
+                "playerId": "string",
+                "bodyPart": "string",
+                "participation": "limited",
+                "status": "doubtful"
+              },
+              {
+                "playerId": "string",
+                "bodyPart": "string",
+                "participation": "full",
+                "status": "out"
+              }
+            ],
+            "submittedBy": "string"
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Latest injury report

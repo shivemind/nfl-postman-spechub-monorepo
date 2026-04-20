@@ -1,0 +1,56 @@
+type: http
+name: Create or replace an ad break plan for a game broadcast
+url: '{{baseUrl}}/games/:gameId/ad-breaks'
+method: POST
+headers:
+  - key: Content-Type
+    value: application/json
+  - key: Accept
+    value: application/json
+pathVariables:
+  - key: gameId
+    value: string
+body:
+  type: json
+  content: |-
+    {
+      "breaks": [
+        {
+          "sequence": 1597,
+          "trigger": "injury",
+          "plannedDurationSeconds": 7380
+        },
+        {
+          "sequence": 303,
+          "trigger": "injury",
+          "plannedDurationSeconds": 8783
+        }
+      ]
+    }
+examples:
+  - response:
+      statusCode: 201
+      statusText: Created
+      body:
+        type: json
+        content: |-
+          {
+            "breaks": [
+              {
+                "sequence": 4692,
+                "trigger": "injury",
+                "plannedDurationSeconds": 7978
+              },
+              {
+                "sequence": 6067,
+                "trigger": "timeout",
+                "plannedDurationSeconds": 3439
+              }
+            ],
+            "gameId": "string",
+            "version": 1093
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Ad break plan created

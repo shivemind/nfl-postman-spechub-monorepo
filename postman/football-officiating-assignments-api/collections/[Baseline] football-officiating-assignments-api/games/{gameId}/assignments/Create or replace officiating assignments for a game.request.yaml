@@ -1,0 +1,77 @@
+type: http
+name: Create or replace officiating assignments for a game
+url: '{{baseUrl}}/games/:gameId/assignments'
+method: POST
+headers:
+  - key: Content-Type
+    value: application/json
+  - key: Accept
+    value: application/json
+pathVariables:
+  - key: gameId
+    value: string
+body:
+  type: json
+  content: |-
+    {
+      "crewId": "string",
+      "assignments": [
+        {
+          "officialId": "string",
+          "fullName": "string",
+          "position": "side-judge",
+          "alternate": false
+        },
+        {
+          "officialId": "string",
+          "fullName": "string",
+          "position": "field-judge",
+          "alternate": false
+        }
+      ],
+      "notes": "string"
+    }
+examples:
+  - response:
+      statusCode: 200
+      statusText: OK
+      body:
+        type: json
+        content: |-
+          {
+            "crewId": "string",
+            "assignments": [
+              {
+                "officialId": "string",
+                "fullName": "string",
+                "position": "side-judge",
+                "alternate": false
+              },
+              {
+                "officialId": "string",
+                "fullName": "string",
+                "position": "field-judge",
+                "alternate": false
+              }
+            ],
+            "notes": "string"
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Assignments saved
+  - response:
+      statusCode: 400
+      statusText: Bad Request
+      body:
+        type: json
+        content: |-
+          {
+            "error": "string",
+            "message": "string",
+            "statusCode": 1172
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Invalid request payload

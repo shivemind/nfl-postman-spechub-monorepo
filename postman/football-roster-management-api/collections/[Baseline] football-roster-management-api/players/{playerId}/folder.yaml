@@ -1,0 +1,4 @@
+type: folder
+name: '{playerId}'
+items:
+  - ref: ./Get player identity, roster, and eligibility detail.request.yaml

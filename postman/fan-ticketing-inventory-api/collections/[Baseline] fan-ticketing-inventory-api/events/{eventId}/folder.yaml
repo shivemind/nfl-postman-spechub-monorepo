@@ -1,0 +1,5 @@
+type: folder
+name: '{eventId}'
+items:
+  - ref: ./inventory/folder.yaml
+  - ref: ./holds/folder.yaml

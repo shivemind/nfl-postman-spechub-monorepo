@@ -1,0 +1,4 @@
+type: folder
+name: roster
+items:
+  - ref: ./Get the active roster, reserve lists, and practice squad for a club.request.yaml

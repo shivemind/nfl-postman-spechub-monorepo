@@ -1,0 +1,49 @@
+type: http
+name: Search games by season, week, or club
+url: '{{baseUrl}}/games?season=2318&week=18&clubId=string'
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+queryParams:
+  - key: season
+    value: '2318'
+  - key: week
+    value: '18'
+  - key: clubId
+    value: string
+examples:
+  - response:
+      statusCode: 200
+      statusText: OK
+      body:
+        type: json
+        content: |-
+          {
+            "data": [
+              {
+                "gameId": "string",
+                "season": 8841,
+                "week": 7391,
+                "kickoffAt": "1989-06-01T21:08:52.798Z",
+                "homeClubId": "string",
+                "awayClubId": "string",
+                "status": "flex-review",
+                "venueCode": "string"
+              },
+              {
+                "gameId": "string",
+                "season": 8105,
+                "week": 1259,
+                "kickoffAt": "1990-06-20T01:32:08.476Z",
+                "homeClubId": "string",
+                "awayClubId": "string",
+                "status": "completed",
+                "venueCode": "string"
+              }
+            ]
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Matching games

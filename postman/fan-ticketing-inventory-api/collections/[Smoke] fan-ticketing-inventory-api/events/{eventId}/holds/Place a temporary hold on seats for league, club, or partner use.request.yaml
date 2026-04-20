@@ -1,0 +1,75 @@
+type: http
+name: Place a temporary hold on seats for league, club, or partner use
+url: '{{baseUrl}}/events/:eventId/holds'
+method: POST
+headers:
+  - key: Content-Type
+    value: application/json
+  - key: Accept
+    value: application/json
+pathVariables:
+  - key: eventId
+    value: string
+body:
+  type: json
+  content: |-
+    {
+      "section": "string",
+      "row": "string",
+      "quantity": 6515,
+      "holdReason": "club",
+      "expiresAt": "1969-10-11T20:32:34.030Z"
+    }
+scripts:
+  - type: afterResponse
+    code:
+      - // [Smoke] Auto-generated test assertions
+      - pm.test('Status code is successful (2xx)', function () {
+      - '    pm.response.to.be.success;'
+      - '});'
+      - pm.test('Response time is acceptable', function () {
+      - '    var threshold = parseInt(pm.environment.get(''RESPONSE_TIME_THRESHOLD'') || ''2000'', 10);'
+      - '    pm.expect(pm.response.responseTime).to.be.below(threshold);'
+      - '});'
+      - pm.test('Response body is not empty', function () {
+      - '    if (pm.response.code !== 204) {'
+      - '        var body = pm.response.text();'
+      - '        pm.expect(body.length).to.be.above(0);'
+      - '    }'
+      - '});'
+    language: text/javascript
+examples:
+  - response:
+      statusCode: 201
+      statusText: Created
+      body:
+        type: json
+        content: |-
+          {
+            "section": "string",
+            "row": "string",
+            "quantity": 616,
+            "holdReason": "partner",
+            "expiresAt": "2001-05-30T14:45:44.408Z",
+            "holdId": "string",
+            "status": "expired"
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Hold created
+  - response:
+      statusCode: 400
+      statusText: Bad Request
+      body:
+        type: json
+        content: |-
+          {
+            "error": "string",
+            "message": "string",
+            "statusCode": 6407
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Invalid request payload

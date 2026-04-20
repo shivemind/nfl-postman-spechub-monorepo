@@ -1,0 +1,57 @@
+type: http
+name: Place a temporary hold on seats for league, club, or partner use
+url: '{{baseUrl}}/events/:eventId/holds'
+method: POST
+headers:
+  - key: Content-Type
+    value: application/json
+  - key: Accept
+    value: application/json
+pathVariables:
+  - key: eventId
+    value: string
+body:
+  type: json
+  content: |-
+    {
+      "section": "string",
+      "row": "string",
+      "quantity": 5563,
+      "holdReason": "hospitality",
+      "expiresAt": "2016-07-31T09:34:17.114Z"
+    }
+examples:
+  - response:
+      statusCode: 201
+      statusText: Created
+      body:
+        type: json
+        content: |-
+          {
+            "section": "string",
+            "row": "string",
+            "quantity": 250,
+            "holdReason": "partner",
+            "expiresAt": "1982-05-06T12:55:19.535Z",
+            "holdId": "string",
+            "status": "active"
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Hold created
+  - response:
+      statusCode: 400
+      statusText: Bad Request
+      body:
+        type: json
+        content: |-
+          {
+            "error": "string",
+            "message": "string",
+            "statusCode": 5819
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Invalid request payload

@@ -1,0 +1,4 @@
+type: folder
+name: windows
+items:
+  - ref: ./Get scheduled broadcast windows and rights details for a game.request.yaml

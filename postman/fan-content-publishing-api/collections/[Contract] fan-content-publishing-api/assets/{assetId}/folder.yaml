@@ -1,0 +1,4 @@
+type: folder
+name: '{assetId}'
+items:
+  - ref: ./Get metadata for a media asset referenced by story content.request.yaml

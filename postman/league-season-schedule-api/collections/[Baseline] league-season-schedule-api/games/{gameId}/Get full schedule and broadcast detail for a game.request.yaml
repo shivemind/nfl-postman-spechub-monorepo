@@ -1,0 +1,57 @@
+type: http
+name: Get full schedule and broadcast detail for a game
+url: '{{baseUrl}}/games/:gameId'
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+pathVariables:
+  - key: gameId
+    value: string
+examples:
+  - response:
+      statusCode: 200
+      statusText: OK
+      body:
+        type: json
+        content: |-
+          {
+            "gameId": "string",
+            "season": 2257,
+            "week": 1400,
+            "kickoffAt": "1985-02-16T16:24:52.319Z",
+            "homeClubId": "string",
+            "awayClubId": "string",
+            "status": "locked",
+            "venueCode": "string",
+            "venue": {
+              "venueId": "string",
+              "name": "string",
+              "city": "string",
+              "state": "string"
+            },
+            "nationalWindow": {
+              "network": "string",
+              "marketType": "regional",
+              "kickoffSlot": "string"
+            }
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Game detail
+  - response:
+      statusCode: 404
+      statusText: Not Found
+      body:
+        type: json
+        content: |-
+          {
+            "error": "string",
+            "message": "string",
+            "statusCode": 6470
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Resource not found

@@ -1,0 +1,4 @@
+type: folder
+name: leaderboards
+items:
+  - ref: ./passing/folder.yaml

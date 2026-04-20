@@ -1,0 +1,19 @@
+$schema: https://schema.postman.com/json/draft-2020-12/collection/v3.0.0/
+type: collection
+name: '[Smoke] operations-broadcast-coordination-api'
+description: Fictional internal API for game windows, feed health, and commercial break planning.
+id: 78dc2c18-d600-4d91-8f2b-e1a8cf9d2270
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{bearerToken}}'
+      type: string
+variables:
+  - key: baseUrl
+    value: https://stage-api.nfl.example.com/broadcast
+    type: any
+items:
+  - ref: ./games/folder.yaml
+  - ref: ./feeds/folder.yaml
+  - ref: ./00 - Resolve Secrets.request.yaml

@@ -1,0 +1,4 @@
+type: folder
+name: gates
+items:
+  - ref: ./List venue gates and their operational state.request.yaml

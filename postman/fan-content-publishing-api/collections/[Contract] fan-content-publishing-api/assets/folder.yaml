@@ -1,0 +1,4 @@
+type: folder
+name: assets
+items:
+  - ref: ./{assetId}/folder.yaml

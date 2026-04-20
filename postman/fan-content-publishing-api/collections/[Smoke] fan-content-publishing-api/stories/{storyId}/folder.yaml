@@ -1,0 +1,5 @@
+type: folder
+name: '{storyId}'
+items:
+  - ref: ./publish/folder.yaml
+  - ref: ./Get a story draft or published item.request.yaml

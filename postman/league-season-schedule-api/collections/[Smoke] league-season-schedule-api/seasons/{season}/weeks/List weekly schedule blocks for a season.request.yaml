@@ -1,0 +1,72 @@
+type: http
+name: List weekly schedule blocks for a season
+url: '{{baseUrl}}/seasons/:season/weeks'
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+pathVariables:
+  - key: season
+    value: '4607'
+scripts:
+  - type: afterResponse
+    code:
+      - // [Smoke] Auto-generated test assertions
+      - pm.test('Status code is successful (2xx)', function () {
+      - '    pm.response.to.be.success;'
+      - '});'
+      - pm.test('Response time is acceptable', function () {
+      - '    var threshold = parseInt(pm.environment.get(''RESPONSE_TIME_THRESHOLD'') || ''2000'', 10);'
+      - '    pm.expect(pm.response.responseTime).to.be.below(threshold);'
+      - '});'
+      - pm.test('Response body is not empty', function () {
+      - '    if (pm.response.code !== 204) {'
+      - '        var body = pm.response.text();'
+      - '        pm.expect(body.length).to.be.above(0);'
+      - '    }'
+      - '});'
+    language: text/javascript
+examples:
+  - response:
+      statusCode: 200
+      statusText: OK
+      body:
+        type: json
+        content: |-
+          {
+            "data": [
+              {
+                "season": 7714,
+                "week": 3522,
+                "startDate": "2003-11-27",
+                "endDate": "1998-09-11",
+                "phase": "preseason"
+              },
+              {
+                "season": 1044,
+                "week": 4968,
+                "startDate": "1978-11-18",
+                "endDate": "1954-07-10",
+                "phase": "regular"
+              }
+            ]
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Weekly schedule blocks
+  - response:
+      statusCode: 404
+      statusText: Not Found
+      body:
+        type: json
+        content: |-
+          {
+            "error": "string",
+            "message": "string",
+            "statusCode": 2053
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Resource not found

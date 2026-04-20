@@ -1,0 +1,4 @@
+type: folder
+name: feeds
+items:
+  - ref: ./{feedId}/folder.yaml

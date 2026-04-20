@@ -1,0 +1,20 @@
+$schema: https://schema.postman.com/json/draft-2020-12/collection/v3.0.0/
+type: collection
+name: '[Contract] platform-identity-access-api'
+description: Fictional internal API for workforce identities, group membership, and service account provisioning.
+id: 402c8fbe-24fd-4940-9b0b-574ecd823329
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{bearerToken}}'
+      type: string
+variables:
+  - key: baseUrl
+    value: https://stage-api.nfl.example.com/iam
+    type: any
+items:
+  - ref: ./identities/folder.yaml
+  - ref: ./groups/folder.yaml
+  - ref: ./service-accounts/folder.yaml
+  - ref: ./00 - Resolve Secrets.request.yaml

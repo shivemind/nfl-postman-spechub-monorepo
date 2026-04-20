@@ -1,0 +1,55 @@
+type: http
+name: Record a roster transaction for league review
+url: '{{baseUrl}}/clubs/:clubId/transactions'
+method: POST
+headers:
+  - key: Content-Type
+    value: application/json
+  - key: Accept
+    value: application/json
+pathVariables:
+  - key: clubId
+    value: string
+body:
+  type: json
+  content: |-
+    {
+      "playerId": "string",
+      "transactionType": "release",
+      "effectiveDate": "1966-03-19",
+      "notes": "string"
+    }
+examples:
+  - response:
+      statusCode: 201
+      statusText: Created
+      body:
+        type: json
+        content: |-
+          {
+            "playerId": "string",
+            "transactionType": "waive",
+            "effectiveDate": "1952-09-27",
+            "notes": "string",
+            "transactionId": "string",
+            "approvalStatus": "pending-review"
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Transaction created
+  - response:
+      statusCode: 400
+      statusText: Bad Request
+      body:
+        type: json
+        content: |-
+          {
+            "error": "string",
+            "message": "string",
+            "statusCode": 2942
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Invalid request payload

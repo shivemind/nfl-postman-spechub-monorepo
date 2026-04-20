@@ -1,0 +1,4 @@
+type: folder
+name: deliveries
+items:
+  - ref: ./{deliveryId}/folder.yaml

@@ -1,0 +1,4 @@
+type: folder
+name: publish
+items:
+  - ref: ./Publish a story to configured destinations.request.yaml

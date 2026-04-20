@@ -1,0 +1,4 @@
+type: folder
+name: designations
+items:
+  - ref: ./Create or replace a player's latest practice or game designation.request.yaml

@@ -1,0 +1,4 @@
+type: folder
+name: '{feedId}'
+items:
+  - ref: ./health/folder.yaml

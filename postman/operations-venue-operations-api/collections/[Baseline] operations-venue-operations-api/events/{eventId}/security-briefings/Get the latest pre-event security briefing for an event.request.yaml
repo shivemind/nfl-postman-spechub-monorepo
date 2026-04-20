@@ -1,0 +1,31 @@
+type: http
+name: Get the latest pre-event security briefing for an event
+url: '{{baseUrl}}/events/:eventId/security-briefings'
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+pathVariables:
+  - key: eventId
+    value: string
+examples:
+  - response:
+      statusCode: 200
+      statusText: OK
+      body:
+        type: json
+        content: |-
+          {
+            "eventId": "string",
+            "meetingTime": "2014-09-19T22:23:20.942Z",
+            "commander": "string",
+            "threatLevel": "high",
+            "notes": [
+              "string",
+              "string"
+            ]
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Security briefing

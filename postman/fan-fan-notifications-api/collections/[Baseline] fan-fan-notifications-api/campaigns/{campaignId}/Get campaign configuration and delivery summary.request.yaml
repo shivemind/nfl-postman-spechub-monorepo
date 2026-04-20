@@ -1,0 +1,46 @@
+type: http
+name: Get campaign configuration and delivery summary
+url: '{{baseUrl}}/campaigns/:campaignId'
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+pathVariables:
+  - key: campaignId
+    value: string
+examples:
+  - response:
+      statusCode: 200
+      statusText: OK
+      body:
+        type: json
+        content: |-
+          {
+            "name": "string",
+            "channel": "email",
+            "audienceType": "app-users",
+            "messageTemplate": "string",
+            "scheduledAt": "1964-12-07T04:33:17.231Z",
+            "campaignId": "string",
+            "status": "cancelled",
+            "deliveryCount": 3549
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Campaign detail
+  - response:
+      statusCode: 404
+      statusText: Not Found
+      body:
+        type: json
+        content: |-
+          {
+            "error": "string",
+            "message": "string",
+            "statusCode": 9924
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Resource not found

@@ -1,0 +1,18 @@
+$schema: https://schema.postman.com/json/draft-2020-12/collection/v3.0.0/
+type: collection
+name: '[Contract] football-game-operations-api'
+description: Fictional internal API for run-of-show tracking, status updates, and incident logging.
+id: 2f9aaf8f-c0fc-4173-978d-efa8509b7d42
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{bearerToken}}'
+      type: string
+variables:
+  - key: baseUrl
+    value: https://stage-api.nfl.example.com/game-ops
+    type: any
+items:
+  - ref: ./games/folder.yaml
+  - ref: ./00 - Resolve Secrets.request.yaml

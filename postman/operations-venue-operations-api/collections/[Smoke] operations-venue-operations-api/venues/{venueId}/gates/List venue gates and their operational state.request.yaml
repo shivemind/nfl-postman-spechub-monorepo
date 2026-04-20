@@ -1,0 +1,56 @@
+type: http
+name: List venue gates and their operational state
+url: '{{baseUrl}}/venues/:venueId/gates'
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+pathVariables:
+  - key: venueId
+    value: string
+scripts:
+  - type: afterResponse
+    code:
+      - // [Smoke] Auto-generated test assertions
+      - pm.test('Status code is successful (2xx)', function () {
+      - '    pm.response.to.be.success;'
+      - '});'
+      - pm.test('Response time is acceptable', function () {
+      - '    var threshold = parseInt(pm.environment.get(''RESPONSE_TIME_THRESHOLD'') || ''2000'', 10);'
+      - '    pm.expect(pm.response.responseTime).to.be.below(threshold);'
+      - '});'
+      - pm.test('Response body is not empty', function () {
+      - '    if (pm.response.code !== 204) {'
+      - '        var body = pm.response.text();'
+      - '        pm.expect(body.length).to.be.above(0);'
+      - '    }'
+      - '});'
+    language: text/javascript
+examples:
+  - response:
+      statusCode: 200
+      statusText: OK
+      body:
+        type: json
+        content: |-
+          {
+            "venueId": "string",
+            "gates": [
+              {
+                "gateId": "string",
+                "label": "string",
+                "status": "open",
+                "ingressType": "general"
+              },
+              {
+                "gateId": "string",
+                "label": "string",
+                "status": "staffing",
+                "ingressType": "staff"
+              }
+            ]
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Venue gates

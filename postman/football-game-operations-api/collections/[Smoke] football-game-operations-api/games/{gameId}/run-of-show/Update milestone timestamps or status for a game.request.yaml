@@ -1,0 +1,82 @@
+type: http
+name: Update milestone timestamps or status for a game
+url: '{{baseUrl}}/games/:gameId/run-of-show'
+method: PATCH
+headers:
+  - key: Content-Type
+    value: application/json
+  - key: Accept
+    value: application/json
+pathVariables:
+  - key: gameId
+    value: string
+body:
+  type: json
+  content: |-
+    {
+      "milestones": [
+        {
+          "code": "string",
+          "label": "string",
+          "status": "in-progress",
+          "scheduledAt": "1990-03-28T20:20:21.951Z",
+          "actualAt": "1983-03-02T04:00:42.109Z"
+        },
+        {
+          "code": "string",
+          "label": "string",
+          "status": "complete",
+          "scheduledAt": "2012-08-09T21:05:45.514Z",
+          "actualAt": "1958-11-04T11:00:48.800Z"
+        }
+      ]
+    }
+scripts:
+  - type: afterResponse
+    code:
+      - // [Smoke] Auto-generated test assertions
+      - pm.test('Status code is successful (2xx)', function () {
+      - '    pm.response.to.be.success;'
+      - '});'
+      - pm.test('Response time is acceptable', function () {
+      - '    var threshold = parseInt(pm.environment.get(''RESPONSE_TIME_THRESHOLD'') || ''2000'', 10);'
+      - '    pm.expect(pm.response.responseTime).to.be.below(threshold);'
+      - '});'
+      - pm.test('Response body is not empty', function () {
+      - '    if (pm.response.code !== 204) {'
+      - '        var body = pm.response.text();'
+      - '        pm.expect(body.length).to.be.above(0);'
+      - '    }'
+      - '});'
+    language: text/javascript
+examples:
+  - response:
+      statusCode: 200
+      statusText: OK
+      body:
+        type: json
+        content: |-
+          {
+            "gameId": "string",
+            "milestones": [
+              {
+                "code": "string",
+                "label": "string",
+                "status": "pending",
+                "scheduledAt": "1951-01-10T00:16:43.871Z",
+                "actualAt": "2004-02-11T09:54:15.619Z"
+              },
+              {
+                "code": "string",
+                "label": "string",
+                "status": "in-progress",
+                "scheduledAt": "1970-06-17T15:44:12.755Z",
+                "actualAt": "1971-04-20T07:26:07.691Z"
+              }
+            ],
+            "operationsLead": "string"
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Run of show updated

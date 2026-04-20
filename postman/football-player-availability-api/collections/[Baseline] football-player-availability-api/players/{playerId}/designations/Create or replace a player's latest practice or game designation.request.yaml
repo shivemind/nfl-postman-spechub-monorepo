@@ -1,0 +1,53 @@
+type: http
+name: Create or replace a player's latest practice or game designation
+url: '{{baseUrl}}/players/:playerId/designations'
+method: PUT
+headers:
+  - key: Content-Type
+    value: application/json
+  - key: Accept
+    value: application/json
+pathVariables:
+  - key: playerId
+    value: string
+body:
+  type: json
+  content: |-
+    {
+      "designationType": "game",
+      "status": "doubtful",
+      "reason": "string"
+    }
+examples:
+  - response:
+      statusCode: 200
+      statusText: OK
+      body:
+        type: json
+        content: |-
+          {
+            "playerId": "string",
+            "designationType": "practice",
+            "status": "doubtful",
+            "reason": "string",
+            "updatedAt": "1953-03-20T15:40:16.655Z"
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Designation saved
+  - response:
+      statusCode: 400
+      statusText: Bad Request
+      body:
+        type: json
+        content: |-
+          {
+            "error": "string",
+            "message": "string",
+            "statusCode": 7730
+          }
+      headers:
+        - key: Content-Type
+          value: application/json
+    name: Invalid request payload

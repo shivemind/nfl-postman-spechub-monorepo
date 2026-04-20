@@ -1,0 +1,5 @@
+type: folder
+name: '{clubId}'
+items:
+  - ref: ./roster/folder.yaml
+  - ref: ./transactions/folder.yaml
