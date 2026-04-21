@@ -63,23 +63,21 @@ for (const fileName of stateFiles) {
 }
 
 const currentSpecs = (() => {
+  const discoveredSpecs = scanSpecFiles(process.cwd());
   if (!stateOnly) {
-    return scanSpecFiles(process.cwd());
+    return discoveredSpecs;
   }
 
-  const specsByPath = new Map();
-
-  for (const [specPath, entry] of Object.entries(manifest.specs || {})) {
-    specsByPath.set(specPath, {
-      specPath,
-      projectName: String(entry?.projectName || projectNameFromSpecPath(specPath)).trim()
-    });
-  }
+  const specsByPath = new Map(discoveredSpecs.map((spec) => [spec.specPath, spec]));
 
   for (const [specPath, entry] of stateBySpecPath.entries()) {
+    if (!specsByPath.has(specPath)) {
+      continue;
+    }
+
     specsByPath.set(specPath, {
       specPath,
-      projectName: String(entry?.projectName || projectNameFromSpecPath(specPath)).trim()
+      projectName: String(entry?.projectName || specsByPath.get(specPath)?.projectName || projectNameFromSpecPath(specPath)).trim()
     });
   }
 

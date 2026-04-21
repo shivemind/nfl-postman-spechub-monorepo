@@ -17,6 +17,14 @@ on:
         description: Optional repo-relative spec path to sync.
         required: false
         type: string
+      workspace_strategy:
+        description: Workspace lifecycle strategy for this run.
+        required: false
+        default: shared
+        type: choice
+        options:
+          - shared
+          - fresh-run
       enable_insights:
         description: Run Postman Insights onboarding for the selected specs.
         required: false
@@ -43,6 +51,7 @@ env:
   POSTMAN_TEAM_ID: ${{ vars.POSTMAN_TEAM_ID }}
   POSTMAN_WORKSPACE_TEAM_ID: ${{ vars.POSTMAN_WORKSPACE_TEAM_ID }}
   POSTMAN_SHARED_WORKSPACE_ID: ${{ vars.POSTMAN_SHARED_WORKSPACE_ID }}
+  POSTMAN_WORKSPACE_STRATEGY: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.workspace_strategy != '' && github.event.inputs.workspace_strategy || vars.POSTMAN_WORKSPACE_STRATEGY != '' && vars.POSTMAN_WORKSPACE_STRATEGY || 'shared' }}
   POSTMAN_ENABLE_INSIGHTS: ${{ vars.POSTMAN_ENABLE_INSIGHTS }}
   POSTMAN_INSIGHTS_CLUSTER_NAME: ${{ vars.POSTMAN_INSIGHTS_CLUSTER_NAME }}
   POSTMAN_INSIGHTS_POLL_TIMEOUT_SECONDS: ${{ vars.POSTMAN_INSIGHTS_POLL_TIMEOUT_SECONDS != '' && vars.POSTMAN_INSIGHTS_POLL_TIMEOUT_SECONDS || '10' }}
@@ -102,6 +111,7 @@ jobs:
       - id: anchor_mode
         name: Decide Anchor Refresh Mode
         env:
+          WORKSPACE_STRATEGY: ${{ env.POSTMAN_WORKSPACE_STRATEGY }}
           CURRENT_SPEC_SHA256: ${{ steps.fingerprint.outputs.spec_sha256 }}
           EXISTING_SPEC_SHA256: ${{ steps.existing.outputs.spec_sha256 }}
           WORKSPACE_ID: ${{ steps.existing.outputs.workspace_id || env.POSTMAN_SHARED_WORKSPACE_ID }}
@@ -116,6 +126,7 @@ jobs:
           node <<'NODE'
           const fs = require('node:fs');
           const envUids = JSON.parse(process.env.ENVIRONMENT_UIDS_JSON || '{}');
+          const freshRun = String(process.env.WORKSPACE_STRATEGY || '').trim() === 'fresh-run';
           const required = [
             process.env.WORKSPACE_ID,
             process.env.SPEC_ID,
@@ -127,6 +138,7 @@ jobs:
           ];
           const hasCompleteState = required.every((value) => String(value || '').trim() !== '') && Object.keys(envUids).length > 0;
           const reuseExisting =
+            !freshRun &&
             hasCompleteState &&
             String(process.env.CURRENT_SPEC_SHA256 || '').trim() !== '' &&
             process.env.CURRENT_SPEC_SHA256 === process.env.EXISTING_SPEC_SHA256;
@@ -150,13 +162,13 @@ jobs:
         env:
           POSTMAN_WORKSPACE_TEAM_ID: ${{ env.POSTMAN_WORKSPACE_TEAM_ID }}
         with:
-          workspace-id: ${{ steps.existing.outputs.workspace_id || env.POSTMAN_SHARED_WORKSPACE_ID }}
-          spec-id: ${{ steps.existing.outputs.spec_id }}
-          baseline-collection-id: ${{ steps.existing.outputs.baseline_collection_id }}
-          smoke-collection-id: ${{ steps.existing.outputs.smoke_collection_id }}
-          contract-collection-id: ${{ steps.existing.outputs.contract_collection_id }}
-          monitor-id: ${{ steps.existing.outputs.monitor_id }}
-          mock-url: ${{ steps.existing.outputs.mock_url }}
+          workspace-id: ${{ env.POSTMAN_WORKSPACE_STRATEGY == 'fresh-run' && '' || steps.existing.outputs.workspace_id || env.POSTMAN_SHARED_WORKSPACE_ID }}
+          spec-id: ${{ env.POSTMAN_WORKSPACE_STRATEGY == 'fresh-run' && '' || steps.existing.outputs.spec_id }}
+          baseline-collection-id: ${{ env.POSTMAN_WORKSPACE_STRATEGY == 'fresh-run' && '' || steps.existing.outputs.baseline_collection_id }}
+          smoke-collection-id: ${{ env.POSTMAN_WORKSPACE_STRATEGY == 'fresh-run' && '' || steps.existing.outputs.smoke_collection_id }}
+          contract-collection-id: ${{ env.POSTMAN_WORKSPACE_STRATEGY == 'fresh-run' && '' || steps.existing.outputs.contract_collection_id }}
+          monitor-id: ${{ env.POSTMAN_WORKSPACE_STRATEGY == 'fresh-run' && '' || steps.existing.outputs.monitor_id }}
+          mock-url: ${{ env.POSTMAN_WORKSPACE_STRATEGY == 'fresh-run' && '' || steps.existing.outputs.mock_url }}
           project-name: ${{ steps.anchor.outputs.project_name }}
           domain: ${{ env.POSTMAN_DOMAIN }}
           domain-code: ${{ env.POSTMAN_DOMAIN_CODE }}
@@ -166,7 +178,7 @@ jobs:
           spec-path: ${{ steps.anchor.outputs.spec_path }}
           environments-json: ${{ env.POSTMAN_ENVIRONMENTS_JSON }}
           system-env-map-json: ${{ env.POSTMAN_SYSTEM_ENV_MAP_JSON }}
-          environment-uids-json: ${{ steps.existing.outputs.environment_uids_json }}
+          environment-uids-json: ${{ env.POSTMAN_WORKSPACE_STRATEGY == 'fresh-run' && '{}' || steps.existing.outputs.environment_uids_json }}
           governance-mapping-json: ${{ env.POSTMAN_GOVERNANCE_MAPPING_JSON }}
           env-runtime-urls-json: ${{ env.POSTMAN_ENV_RUNTIME_URLS_JSON }}
           monitor-cron: ${{ env.POSTMAN_MONITOR_CRON }}
@@ -362,6 +374,7 @@ jobs:
       - id: sync_mode
         name: Decide Spec Refresh Mode
         env:
+          WORKSPACE_STRATEGY: ${{ env.POSTMAN_WORKSPACE_STRATEGY }}
           CURRENT_SPEC_SHA256: ${{ steps.fingerprint.outputs.spec_sha256 }}
           EXISTING_SPEC_SHA256: ${{ steps.existing.outputs.spec_sha256 }}
           SPEC_ID: ${{ steps.existing.outputs.spec_id }}
@@ -375,6 +388,7 @@ jobs:
           node <<'NODE'
           const fs = require('node:fs');
           const envUids = JSON.parse(process.env.ENVIRONMENT_UIDS_JSON || '{}');
+          const freshRun = String(process.env.WORKSPACE_STRATEGY || '').trim() === 'fresh-run';
           const required = [
             process.env.SPEC_ID,
             process.env.BASELINE_COLLECTION_ID,
@@ -385,6 +399,7 @@ jobs:
           ];
           const hasCompleteState = required.every((value) => String(value || '').trim() !== '') && Object.keys(envUids).length > 0;
           const reuseExisting =
+            !freshRun &&
             hasCompleteState &&
             String(process.env.CURRENT_SPEC_SHA256 || '').trim() !== '' &&
             process.env.CURRENT_SPEC_SHA256 === process.env.EXISTING_SPEC_SHA256;
@@ -407,10 +422,10 @@ jobs:
         uses: postman-cs/postman-bootstrap-action@e52530a0e57a5ce12b9a1d97a49621b6573782df
         with:
           workspace-id: ${{ needs.anchor-onboarding.outputs.workspace-id }}
-          spec-id: ${{ steps.existing.outputs.spec_id }}
-          baseline-collection-id: ${{ steps.existing.outputs.baseline_collection_id }}
-          smoke-collection-id: ${{ steps.existing.outputs.smoke_collection_id }}
-          contract-collection-id: ${{ steps.existing.outputs.contract_collection_id }}
+          spec-id: ${{ env.POSTMAN_WORKSPACE_STRATEGY == 'fresh-run' && '' || steps.existing.outputs.spec_id }}
+          baseline-collection-id: ${{ env.POSTMAN_WORKSPACE_STRATEGY == 'fresh-run' && '' || steps.existing.outputs.baseline_collection_id }}
+          smoke-collection-id: ${{ env.POSTMAN_WORKSPACE_STRATEGY == 'fresh-run' && '' || steps.existing.outputs.smoke_collection_id }}
+          contract-collection-id: ${{ env.POSTMAN_WORKSPACE_STRATEGY == 'fresh-run' && '' || steps.existing.outputs.contract_collection_id }}
           project-name: ${{ matrix.projectName }}
           domain: ${{ env.POSTMAN_DOMAIN }}
           domain-code: ${{ env.POSTMAN_DOMAIN_CODE }}
@@ -432,12 +447,12 @@ jobs:
           baseline-collection-id: ${{ steps.bootstrap.outputs.baseline-collection-id }}
           smoke-collection-id: ${{ steps.bootstrap.outputs.smoke-collection-id }}
           contract-collection-id: ${{ steps.bootstrap.outputs.contract-collection-id }}
-          monitor-id: ${{ steps.existing.outputs.monitor_id }}
-          mock-url: ${{ steps.existing.outputs.mock_url }}
+          monitor-id: ${{ env.POSTMAN_WORKSPACE_STRATEGY == 'fresh-run' && '' || steps.existing.outputs.monitor_id }}
+          mock-url: ${{ env.POSTMAN_WORKSPACE_STRATEGY == 'fresh-run' && '' || steps.existing.outputs.mock_url }}
           environments-json: ${{ env.POSTMAN_ENVIRONMENTS_JSON }}
           env-runtime-urls-json: ${{ env.POSTMAN_ENV_RUNTIME_URLS_JSON }}
           system-env-map-json: ${{ env.POSTMAN_SYSTEM_ENV_MAP_JSON }}
-          environment-uids-json: ${{ steps.existing.outputs.environment_uids_json }}
+          environment-uids-json: ${{ env.POSTMAN_WORKSPACE_STRATEGY == 'fresh-run' && '{}' || steps.existing.outputs.environment_uids_json }}
           monitor-cron: ${{ env.POSTMAN_MONITOR_CRON }}
           generate-ci-workflow: 'false'
           repo-write-mode: none
@@ -595,11 +610,17 @@ jobs:
           path: .postman/export-bundles
 
       - name: Delete Removed Postman Assets
+        if: env.POSTMAN_WORKSPACE_STRATEGY != 'fresh-run'
         env:
           POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
         run: node scripts/postman/delete-removed-assets.mjs .postman/spec-hub-manifest.json
 
+      - name: Preserve Shared Repo State In Fresh Run Mode
+        if: env.POSTMAN_WORKSPACE_STRATEGY == 'fresh-run'
+        run: echo "Fresh-run mode skips manifest/export commits and keeps results only in workflow artifacts."
+
       - name: Merge Spec Hub Manifest
+        if: env.POSTMAN_WORKSPACE_STRATEGY != 'fresh-run'
         run: >
           node scripts/postman/merge-spec-manifest.mjs
           --manifest .postman/spec-hub-manifest.json
@@ -607,6 +628,7 @@ jobs:
           ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.spec_path != '' && '--state-only true' || '' }}
 
       - name: Sync Postman Monorepo Export Tree
+        if: env.POSTMAN_WORKSPACE_STRATEGY != 'fresh-run'
         run: |
           mkdir -p postman
           node <<'NODE'
@@ -650,11 +672,13 @@ jobs:
           fi
 
       - name: Render Postman Monorepo Files
+        if: env.POSTMAN_WORKSPACE_STRATEGY != 'fresh-run'
         run: >
           node scripts/postman/render-postman-monorepo.mjs
           --manifest .postman/spec-hub-manifest.json
 
       - name: Commit Updated Postman State
+        if: env.POSTMAN_WORKSPACE_STRATEGY != 'fresh-run'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |

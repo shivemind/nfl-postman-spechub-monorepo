@@ -42,84 +42,195 @@ All endpoints, domains, and identifiers are illustrative only. The specs use `ex
 
 ## NFL Spec Hub Automation
 
-This repo now includes `.github/workflows/nfl-postman-spechub.yml`, which wraps the four `postman-cs` open-alpha actions into a monorepo-safe fanout pipeline:
+This repo includes [`nfl-postman-spechub.yml`](.github/workflows/nfl-postman-spechub.yml), which wraps the four `postman-cs` open-alpha actions into an NFL-oriented monorepo pipeline for Postman Spec Hub, not API Builder.
 
-- `postman-cs/postman-api-onboarding-action`
-- `postman-cs/postman-bootstrap-action`
-- `postman-cs/postman-repo-sync-action`
-- `postman-cs/postman-insights-onboarding-action`
+Validated shape for this repo:
 
-The workflow is designed for the NFL use case where one GitHub monorepo publishes many OpenAPI specs into one shared Postman workspace in Spec Hub, not API Builder.
+- 13 OpenAPI specs in one GitHub monorepo
+- one synthetic 250-endpoint scale-test spec
+- fan-out into one Postman workspace in shared mode
+- single-spec manual sync via `workflow_dispatch`
+- repo-side Postman export under `postman/<project>/...`
 
-### What It Does
+### Actions Used
 
-- Triggers on pushes to `main`.
-- Supports a manual single-spec run with `workflow_dispatch` and `spec_path`.
-- Reuses one shared Postman workspace across all specs.
-- Creates or updates one Spec Hub asset plus baseline, smoke, and contract collections per spec.
-- Creates or updates per-spec environments, mocks, and monitors through the repo-sync action.
-- Runs smoke and contract collections through Postman CLI when runtime URLs are configured.
-- Optionally runs Insights onboarding when a cluster-backed deployment exists.
-- Keeps `.postman/spec-hub-manifest.json` updated so reruns stay idempotent.
+The workflow runs these actions in order:
+
+1. `postman-cs/postman-api-onboarding-action`
+   Used for the anchor spec. It composes bootstrap plus repo-sync to establish the workspace context for the run.
+2. `postman-cs/postman-bootstrap-action`
+   Creates or reuses the Postman workspace, uploads the spec into Spec Hub, lints the uploaded spec with the Postman CLI, generates or refreshes baseline, smoke, and contract collections, and applies governance mapping.
+3. `postman-cs/postman-repo-sync-action`
+   Creates or updates environments, mocks, and monitors, links the Postman workspace back to the Git repository through native Git integration, and exports multi-file collection artifacts into the repo.
+4. `postman-cs/postman-insights-onboarding-action`
+   Optionally links discovered Postman Insights services to the target workspace and repository and creates the observability binding.
+
+The workflow also uses `postmanlabs/postman-cli-action@v1` for explicit `collection run` steps against generated smoke and contract collections when runtime URLs are configured.
+
+### Workspace Strategy
+
+The pipeline now supports two workspace lifecycle strategies:
+
+| Strategy | How to enable | What it does | Best for |
+| --- | --- | --- | --- |
+| `shared` | Default. Also set `POSTMAN_WORKSPACE_STRATEGY=shared`. | Reconciles one canonical Postman workspace across runs. Uses the committed manifest to skip unchanged specs and preserve stable Postman IDs. | Production catalog sync, stable CI/CD, true no-op reruns |
+| `fresh-run` | Set `POSTMAN_WORKSPACE_STRATEGY=fresh-run` or choose it in `workflow_dispatch`. | Provisions a brand new Postman workspace for that run, then fans all specs from the monorepo into that fresh workspace while keeping the committed shared manifest and export tree unchanged. | Preview runs, demos, isolated snapshots, clean-room validation |
+
+Important tradeoff:
+
+- `shared` mode is the idempotent production mode. If nothing changed, the rerun becomes a no-op and `finalize-manifest` exits without a commit.
+- `fresh-run` mode is deterministic, but not a no-op at the Postman cloud layer because every run intentionally creates a new workspace and therefore new Postman asset IDs.
+- `fresh-run` uploads generated state and export bundles as workflow artifacts, but it intentionally does not overwrite the committed shared manifest or `postman/` export tree.
+
+### Idempotency Model
+
+In `shared` mode, idempotency comes from the committed manifest in [`spec-hub-manifest.json`](.postman/spec-hub-manifest.json):
+
+- Each spec is fingerprinted with `specSha256`.
+- The manifest stores the last known `workspaceId`, `specId`, collection IDs, environment UIDs, mock URL, and monitor ID.
+- If a spec hash and all required Postman IDs already match, the workflow skips expensive bootstrap and repo-sync work for that spec.
+- `finalize-manifest` only commits when stable repo-side Postman state actually changed.
+
+In `fresh-run` mode, the workflow ignores committed cloud IDs on purpose and provisions a brand new workspace for the run. The generated state stays in workflow artifacts so the canonical shared-mode manifest is not polluted with ephemeral preview workspace IDs.
 
 ### CI Pipeline Diagram
 
 ```mermaid
 flowchart TD
-    A["Push to `main` or manual `workflow_dispatch`"] --> B["`resolve-specs`<br/>Build anchor spec + remaining spec matrix"]
-    B --> C["`anchor-onboarding`<br/>Look up manifest state and hash current anchor spec"]
+    A["Push to `main` or manual `workflow_dispatch`"] --> B["Select workspace strategy<br/>`shared` or `fresh-run`"]
+    B --> C["`resolve-specs`<br/>Build anchor spec + remaining spec matrix"]
+    C --> D["`anchor-onboarding`<br/>Parse anchor spec and load manifest state"]
 
-    C --> D{"Anchor spec changed<br/>or missing Postman state?"}
-    D -->|Yes| E["`postman-api-onboarding-action`<br/>Create or update Spec Hub assets in one shared workspace"]
-    D -->|No| F["Reuse existing anchor asset IDs<br/>from `.postman/spec-hub-manifest.json`"]
+    D --> E{"Workspace strategy"}
+    E -->|`shared`| F["Reuse prior workspace/spec IDs when hashes match"]
+    E -->|`fresh-run`| G["Ignore prior cloud IDs and create a brand new workspace"]
 
-    E --> G["Optional smoke and contract runs<br/>via Postman CLI when runtime URLs exist"]
-    F --> G
-    G --> H["Optional `postman-insights-onboarding-action`"]
-    H --> I["Anchor export bundle<br/>`postman/<project>/...` + state artifact"]
+    F --> H["`postman-api-onboarding-action` for anchor spec when needed"]
+    G --> H
+    H --> I["Optional Postman CLI smoke and contract runs<br/>when runtime URLs are configured"]
+    I --> J["Optional `postman-insights-onboarding-action`"]
+    J --> K["Anchor state artifact + export bundle"]
 
-    I --> J{"Remaining specs?"}
-    J -->|Yes| K["`sync-remaining-specs` matrix<br/>Runs serially with `max-parallel: 1`"]
-    J -->|No| L["Skip matrix"]
-
-    K --> M["Per spec:<br/>lookup state + hash spec"]
-    M --> N{"Spec changed<br/>or missing state?"}
+    K --> L["`sync-remaining-specs` matrix<br/>serial with `max-parallel: 1`"]
+    L --> M["Per spec:<br/>load state + compute spec hash"]
+    M --> N{"Changed or forced fresh-run?"}
     N -->|Yes| O["`postman-bootstrap-action` + `postman-repo-sync-action`"]
-    N -->|No| P["Reuse existing spec asset IDs"]
-    O --> Q["Optional smoke / contract / insights"]
+    N -->|No| P["Reuse existing Postman IDs"]
+    O --> Q["Optional CLI smoke / contract / Insights"]
     P --> Q
-    Q --> R["Package project export archive<br/>and spec state artifact"]
+    Q --> R["Persist state + package project export"]
     R --> S["Next spec"]
-    S --> K
+    S --> L
 
-    K --> T["`finalize-manifest`"]
-    L --> T
-    T --> U["Merge spec state into `.postman/spec-hub-manifest.json`"]
-    U --> V["Unpack changed project exports into repo `postman/` tree"]
-    V --> W["Render repo-wide `.postman/resources.yaml` and `.postman/workflows.yaml`"]
-    W --> X{"Stable state changed?"}
-    X -->|Yes| Y["Commit updated Postman repo state back to `main`"]
-    X -->|No| Z["Exit cleanly with no commit"]
+    L -->|`shared`| T["`finalize-manifest`"]
+    L -->|`fresh-run`| Z["Keep state + export bundles as workflow artifacts"]
+    T --> U["Merge state artifacts into `.postman/spec-hub-manifest.json`"]
+    U --> V["Render `.postman/resources.yaml`, `.postman/workflows.yaml`, and `postman/<project>/...`"]
+    V --> W{"Stable repo-side state changed?"}
+    W -->|Yes| X["Commit refreshed Postman export state"]
+    W -->|No| Y["Exit cleanly with no commit"]
 ```
 
-The key control points are:
+### What Happens In The Pipeline
 
-- `resolve-specs` decides whether the run is a full monorepo fan-out or a single-spec sync.
-- `anchor-onboarding` always establishes the shared workspace context first.
-- `sync-remaining-specs` runs one spec at a time so Postman asset updates stay deterministic in the shared workspace.
-- Spec SHA-256 checks let unchanged specs reuse existing Postman asset IDs instead of regenerating collections and mocks.
-- `finalize-manifest` only commits when the stable repo-side Postman state actually changed.
+1. `resolve-specs` scans `openapi/**` and produces either a full monorepo matrix or one targeted spec from `workflow_dispatch.spec_path`.
+2. `anchor-onboarding` handles the first spec and establishes the workspace that the rest of the run will target.
+3. `sync-remaining-specs` runs the remaining specs serially with `max-parallel: 1` so one monorepo workspace is updated deterministically.
+4. Each spec produces:
+   - one Spec Hub spec
+   - one baseline collection
+   - one smoke collection
+   - one contract collection
+   - one environment per configured slug
+   - one mock
+   - one smoke monitor
+   - one repo-side export tree under `postman/<project>/...`
+5. In `shared` mode, `finalize-manifest` merges state and exports back into the repo and only commits stable state changes. In `fresh-run` mode, the workflow keeps the generated bundles as artifacts and leaves committed repo state untouched.
 
-### Why The Extra Manifest Exists
+### Native Git Integration
 
-The `postman-cs` actions are service-oriented and accept a single `spec-url` per invocation. For a monorepo with many specs in one shared workspace, the workflow fans out once per spec and stores the Postman IDs in `.postman/spec-hub-manifest.json`. That manifest is the repo-side source of truth for safe reruns, updates, and deletions.
+The pipeline leans on Postman's native Git integration through the `postman-cs` actions:
+
+- `postman-repo-sync-action` links the target Postman workspace to the repository through Bifrost.
+- The action supports GitHub and GitLab repository URLs and can auto-detect the repo URL from CI context when `repo-url` is omitted.
+- Exported collections are written in the Postman Collection v3 multi-file YAML directory structure under `postman/<project>/collections/...`.
+- Environments are exported under `postman/<project>/environments/...`.
+- The repo-wide [`resources.yaml`](.postman/resources.yaml) and [`workflows.yaml`](.postman/workflows.yaml) provide the mapping between local files and Postman cloud resources.
+- `postman-insights-onboarding-action` also uses the repo URL to connect discovered services back to the workspace and Git source.
+
+### Postman CLI, Lint, Smoke, Contract, And Governance
+
+The pipeline uses the Postman CLI in two ways:
+
+- `postman-bootstrap-action` lints the uploaded spec by Postman spec UID and exposes a `lint-summary-json` output.
+- The top-level workflow runs generated smoke and contract collections with `postmanlabs/postman-cli-action@v1` when `POSTMAN_ENV_RUNTIME_URLS_JSON` is configured.
+
+What that means in practice:
+
+- spec quality checks happen during bootstrap
+- smoke and contract checks happen in CI against generated collections
+- failures are surfaced directly in GitHub Actions
+
+Governance is applied at a higher level through the bootstrap and sync inputs:
+
+- `domain` and `governance-mapping-json` assign the workspace to the correct governance grouping
+- `system-env-map-json` and environment sync associate Postman environments to system environments
+- the generated collections, mocks, monitors, and exported resources stay aligned to that governed structure
+
+The CLI does not create governance groups by itself. Instead, the actions use Postman APIs and internal Bifrost flows to place assets correctly, while the CLI makes quality and contract drift visible in CI.
+
+### Why This Helps The NFL
+
+- One internal monorepo becomes the source of truth for many services without manually recreating those services in Postman.
+- The NFL gets a repeatable path from Git push to Spec Hub, generated collections, environments, mocks, and monitors.
+- Smoke and contract suites can be baked into CI/CD rather than run manually by individual teams.
+- Governance stays consistent across league, football, fan, operations, and platform domains.
+- Native Git linking makes it easier to understand which repository produced which workspace content.
+- Large-service onboarding is easier to prove. This repo includes a 250-endpoint scale-test spec and the fan-out workflow handles it alongside the other specs.
+- The exported Postman monorepo structure gives the NFL a repo-native artifact trail for review, pull requests, and auditability.
+
+### Customer Setup
+
+1. Keep each OpenAPI spec under `openapi/**` so the resolver can discover it automatically.
+2. Commit the workflow and helper scripts from this repo:
+   - [`nfl-postman-spechub.yml`](.github/workflows/nfl-postman-spechub.yml)
+   - [`scripts/postman`](scripts/postman)
+3. Add required GitHub secrets:
+   - `POSTMAN_API_KEY`
+   - `POSTMAN_ACCESS_TOKEN`
+   - `GH_FALLBACK_TOKEN`
+   - `SHIVEMIND_GITHUB_TOKEN`
+4. Add the core repository variables:
+   - `POSTMAN_WORKSPACE_STRATEGY`
+   - `POSTMAN_ENVIRONMENTS_JSON`
+   - `POSTMAN_ENV_RUNTIME_URLS_JSON`
+   - `POSTMAN_SYSTEM_ENV_MAP_JSON`
+   - `POSTMAN_GOVERNANCE_MAPPING_JSON`
+   - `POSTMAN_MONITOR_CRON`
+   - `POSTMAN_WORKSPACE_ADMIN_USER_IDS`
+   - `POSTMAN_REQUESTER_EMAIL`
+   - `POSTMAN_DOMAIN`
+   - `POSTMAN_DOMAIN_CODE`
+5. Add optional workspace and org variables only if needed:
+   - `POSTMAN_SHARED_WORKSPACE_ID` for preexisting shared mode workspaces
+   - `POSTMAN_WORKSPACE_TEAM_ID` for org-mode workspace creation
+   - `POSTMAN_TEAM_ID` for explicit Bifrost team header overrides
+6. Decide the workspace operating model:
+   - use `shared` for the NFL production catalog and idempotent reruns
+   - use `fresh-run` for isolated monorepo snapshot workspaces
+7. Configure runtime URLs if you want smoke and contract execution in CI:
+   - example `POSTMAN_ENV_RUNTIME_URLS_JSON={"prod":"https://api.nfl.example.com"}`
+8. Configure Insights only when the services are actually discoverable:
+   - `POSTMAN_ENABLE_INSIGHTS=true`
+   - `POSTMAN_INSIGHTS_CLUSTER_NAME=<cluster-name>`
+9. Push to `main` for a full monorepo sync, or use `workflow_dispatch` with `spec_path` for a single-spec sync.
 
 ### Required Secrets
 
 - `POSTMAN_API_KEY`
-  Use a Postman API key for standard Postman API and CLI operations.
+  Used for standard Postman API and CLI operations.
 - `POSTMAN_ACCESS_TOKEN`
-  Required for governance assignment, workspace-to-repo linking, system environment association, and Insights onboarding in the open-alpha `postman-cs` actions.
+  Used for governance assignment, workspace-to-repo linking, system environment association, canonical workspace validation, and Insights onboarding in the open-alpha `postman-cs` actions.
 - `GH_FALLBACK_TOKEN`
   Optional GitHub token for repo mutation fallbacks inside the `postman-cs` actions.
 - `SHIVEMIND_GITHUB_TOKEN`
@@ -127,8 +238,10 @@ The `postman-cs` actions are service-oriented and accept a single `spec-url` per
 
 ### Recommended Repository Variables
 
+- `POSTMAN_WORKSPACE_STRATEGY`
+  `shared` or `fresh-run`
 - `POSTMAN_SHARED_WORKSPACE_ID`
-  Optional override if the Winter Trinity workspace already exists.
+  Optional shared workspace override. Only relevant in `shared` mode.
 - `POSTMAN_WORKSPACE_TEAM_ID`
   Required for org-mode workspace creation when multiple sub-teams exist.
 - `POSTMAN_TEAM_ID`
@@ -140,13 +253,17 @@ The `postman-cs` actions are service-oriented and accept a single `spec-url` per
 - `POSTMAN_SYSTEM_ENV_MAP_JSON`
   Example: `{"prod":"<system-env-uuid>","stage":"<system-env-uuid>"}`
 - `POSTMAN_GOVERNANCE_MAPPING_JSON`
-  Example: `{"platform":"NFL Platform Governance"}`
+  Example: `{"platform":"NFL Platform Governance","football":"NFL Football Governance"}`
 - `POSTMAN_MONITOR_CRON`
   Example: `0 */6 * * *`
 - `POSTMAN_ENABLE_INSIGHTS`
   Set to `true` only when the service is deployed and discoverable by Postman Insights.
 - `POSTMAN_INSIGHTS_CLUSTER_NAME`
   Kubernetes cluster name used by the Insights onboarding action.
+- `POSTMAN_INSIGHTS_POLL_TIMEOUT_SECONDS`
+  Poll timeout for the Insights onboarding action.
+- `POSTMAN_INSIGHTS_POLL_INTERVAL_SECONDS`
+  Poll interval for the Insights onboarding action.
 
 ### Token Handling
 
