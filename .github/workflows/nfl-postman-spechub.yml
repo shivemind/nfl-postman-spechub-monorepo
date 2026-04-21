@@ -83,6 +83,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Remove Checked-in Postman Resource State For Fresh Runs
+        if: env.POSTMAN_WORKSPACE_STRATEGY == 'fresh-run'
+        run: rm -f .postman/resources.yaml
+
       - id: anchor
         name: Parse Anchor Spec
         env:
@@ -155,75 +159,279 @@ jobs:
           node scripts/postman/build-spec-url.mjs
           --spec-path "${{ steps.anchor.outputs.spec_path }}"
 
-      - id: onboard
-        name: Seed Shared Workspace with Composite Onboarding
-        if: steps.anchor_mode.outputs.reuse_existing != 'true'
-        uses: postman-cs/postman-api-onboarding-action@91d044e308ba8577e66a73e10acc3f7acf8c6f7e
+      - id: anchor_inputs
+        name: Resolve Anchor Action Inputs
         env:
-          POSTMAN_WORKSPACE_TEAM_ID: ${{ env.POSTMAN_WORKSPACE_TEAM_ID }}
+          WORKSPACE_STRATEGY: ${{ env.POSTMAN_WORKSPACE_STRATEGY }}
+          EXISTING_WORKSPACE_ID: ${{ steps.existing.outputs.workspace_id }}
+          SHARED_WORKSPACE_ID: ${{ env.POSTMAN_SHARED_WORKSPACE_ID }}
+          EXISTING_SPEC_ID: ${{ steps.existing.outputs.spec_id }}
+          EXISTING_BASELINE_COLLECTION_ID: ${{ steps.existing.outputs.baseline_collection_id }}
+          EXISTING_SMOKE_COLLECTION_ID: ${{ steps.existing.outputs.smoke_collection_id }}
+          EXISTING_CONTRACT_COLLECTION_ID: ${{ steps.existing.outputs.contract_collection_id }}
+          EXISTING_MONITOR_ID: ${{ steps.existing.outputs.monitor_id }}
+          EXISTING_MOCK_URL: ${{ steps.existing.outputs.mock_url }}
+          EXISTING_ENVIRONMENT_UIDS_JSON: ${{ steps.existing.outputs.environment_uids_json }}
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const freshRun = String(process.env.WORKSPACE_STRATEGY || '').trim() === 'fresh-run';
+          const first = (...values) => values.find((value) => String(value || '').trim() !== '') || '';
+          const outputs = {
+            workspace_id: freshRun
+              ? ''
+              : first(process.env.EXISTING_WORKSPACE_ID, process.env.SHARED_WORKSPACE_ID),
+            spec_id: freshRun ? '' : first(process.env.EXISTING_SPEC_ID),
+            baseline_collection_id: freshRun ? '' : first(process.env.EXISTING_BASELINE_COLLECTION_ID),
+            smoke_collection_id: freshRun ? '' : first(process.env.EXISTING_SMOKE_COLLECTION_ID),
+            contract_collection_id: freshRun ? '' : first(process.env.EXISTING_CONTRACT_COLLECTION_ID),
+            monitor_id: freshRun ? '' : first(process.env.EXISTING_MONITOR_ID),
+            mock_url: freshRun ? '' : first(process.env.EXISTING_MOCK_URL),
+            environment_uids_json: freshRun ? '{}' : first(process.env.EXISTING_ENVIRONMENT_UIDS_JSON, '{}')
+          };
+
+          for (const [key, value] of Object.entries(outputs)) {
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, `${key}=${value}\n`);
+          }
+          NODE
+
+      - id: anchor_bootstrap_shared
+        name: Bootstrap Anchor Spec Hub Assets
+        if: steps.anchor_mode.outputs.reuse_existing != 'true' && env.POSTMAN_WORKSPACE_STRATEGY != 'fresh-run'
+        uses: postman-cs/postman-bootstrap-action@e52530a0e57a5ce12b9a1d97a49621b6573782df
         with:
-          workspace-id: ${{ env.POSTMAN_WORKSPACE_STRATEGY == 'fresh-run' && '' || steps.existing.outputs.workspace_id || env.POSTMAN_SHARED_WORKSPACE_ID }}
-          spec-id: ${{ env.POSTMAN_WORKSPACE_STRATEGY == 'fresh-run' && '' || steps.existing.outputs.spec_id }}
-          baseline-collection-id: ${{ env.POSTMAN_WORKSPACE_STRATEGY == 'fresh-run' && '' || steps.existing.outputs.baseline_collection_id }}
-          smoke-collection-id: ${{ env.POSTMAN_WORKSPACE_STRATEGY == 'fresh-run' && '' || steps.existing.outputs.smoke_collection_id }}
-          contract-collection-id: ${{ env.POSTMAN_WORKSPACE_STRATEGY == 'fresh-run' && '' || steps.existing.outputs.contract_collection_id }}
-          monitor-id: ${{ env.POSTMAN_WORKSPACE_STRATEGY == 'fresh-run' && '' || steps.existing.outputs.monitor_id }}
-          mock-url: ${{ env.POSTMAN_WORKSPACE_STRATEGY == 'fresh-run' && '' || steps.existing.outputs.mock_url }}
+          workspace-id: ${{ steps.anchor_inputs.outputs.workspace_id }}
+          spec-id: ${{ steps.anchor_inputs.outputs.spec_id }}
+          baseline-collection-id: ${{ steps.anchor_inputs.outputs.baseline_collection_id }}
+          smoke-collection-id: ${{ steps.anchor_inputs.outputs.smoke_collection_id }}
+          contract-collection-id: ${{ steps.anchor_inputs.outputs.contract_collection_id }}
           project-name: ${{ steps.anchor.outputs.project_name }}
           domain: ${{ env.POSTMAN_DOMAIN }}
           domain-code: ${{ env.POSTMAN_DOMAIN_CODE }}
           requester-email: ${{ env.POSTMAN_REQUESTER_EMAIL }}
           workspace-admin-user-ids: ${{ env.POSTMAN_WORKSPACE_ADMIN_USER_IDS }}
+          workspace-team-id: ${{ env.POSTMAN_WORKSPACE_TEAM_ID }}
           spec-url: ${{ steps.spec_url.outputs.spec_url }}
-          spec-path: ${{ steps.anchor.outputs.spec_path }}
-          environments-json: ${{ env.POSTMAN_ENVIRONMENTS_JSON }}
-          system-env-map-json: ${{ env.POSTMAN_SYSTEM_ENV_MAP_JSON }}
-          environment-uids-json: ${{ env.POSTMAN_WORKSPACE_STRATEGY == 'fresh-run' && '{}' || steps.existing.outputs.environment_uids_json }}
           governance-mapping-json: ${{ env.POSTMAN_GOVERNANCE_MAPPING_JSON }}
+          postman-api-key: ${{ secrets.POSTMAN_API_KEY }}
+          postman-access-token: ${{ secrets.POSTMAN_ACCESS_TOKEN }}
+
+      - id: anchor_bootstrap_fresh
+        name: Bootstrap Anchor Spec Hub Assets
+        if: steps.anchor_mode.outputs.reuse_existing != 'true' && env.POSTMAN_WORKSPACE_STRATEGY == 'fresh-run'
+        uses: postman-cs/postman-bootstrap-action@e52530a0e57a5ce12b9a1d97a49621b6573782df
+        with:
+          workspace-id: ${{ steps.anchor_inputs.outputs.workspace_id }}
+          spec-id: ${{ steps.anchor_inputs.outputs.spec_id }}
+          baseline-collection-id: ${{ steps.anchor_inputs.outputs.baseline_collection_id }}
+          smoke-collection-id: ${{ steps.anchor_inputs.outputs.smoke_collection_id }}
+          contract-collection-id: ${{ steps.anchor_inputs.outputs.contract_collection_id }}
+          project-name: ${{ steps.anchor.outputs.project_name }}
+          domain: ${{ env.POSTMAN_DOMAIN }}
+          domain-code: ${{ env.POSTMAN_DOMAIN_CODE }}
+          requester-email: ${{ env.POSTMAN_REQUESTER_EMAIL }}
+          workspace-admin-user-ids: ${{ env.POSTMAN_WORKSPACE_ADMIN_USER_IDS }}
+          workspace-team-id: ${{ env.POSTMAN_WORKSPACE_TEAM_ID }}
+          spec-url: ${{ steps.spec_url.outputs.spec_url }}
+          governance-mapping-json: ${{ env.POSTMAN_GOVERNANCE_MAPPING_JSON }}
+          postman-api-key: ${{ secrets.POSTMAN_API_KEY }}
+
+      - id: anchor_repo_sync
+        name: Materialize Anchor Environments, Mocks, and Monitors
+        if: steps.anchor_mode.outputs.reuse_existing != 'true'
+        uses: postman-cs/postman-repo-sync-action@98f08e5d3a35ae922bf99aa21d815d64043de6e7
+        with:
+          project-name: ${{ steps.anchor.outputs.project_name }}
+          workspace-id: ${{ steps.anchor_bootstrap_shared.outputs.workspace-id || steps.anchor_bootstrap_fresh.outputs.workspace-id }}
+          baseline-collection-id: ${{ steps.anchor_bootstrap_shared.outputs.baseline-collection-id || steps.anchor_bootstrap_fresh.outputs.baseline-collection-id }}
+          smoke-collection-id: ${{ steps.anchor_bootstrap_shared.outputs.smoke-collection-id || steps.anchor_bootstrap_fresh.outputs.smoke-collection-id }}
+          contract-collection-id: ${{ steps.anchor_bootstrap_shared.outputs.contract-collection-id || steps.anchor_bootstrap_fresh.outputs.contract-collection-id }}
+          monitor-id: ${{ steps.anchor_inputs.outputs.monitor_id }}
+          mock-url: ${{ steps.anchor_inputs.outputs.mock_url }}
+          environments-json: ${{ env.POSTMAN_ENVIRONMENTS_JSON }}
           env-runtime-urls-json: ${{ env.POSTMAN_ENV_RUNTIME_URLS_JSON }}
+          system-env-map-json: ${{ env.POSTMAN_SYSTEM_ENV_MAP_JSON }}
+          environment-uids-json: ${{ steps.anchor_inputs.outputs.environment_uids_json }}
           monitor-cron: ${{ env.POSTMAN_MONITOR_CRON }}
           generate-ci-workflow: 'false'
           repo-write-mode: none
+          workspace-link-enabled: 'false'
+          artifact-dir: postman/${{ steps.anchor.outputs.project_name }}
+          spec-id: ${{ steps.anchor_bootstrap_shared.outputs.spec-id || steps.anchor_bootstrap_fresh.outputs.spec-id }}
+          spec-path: ${{ steps.anchor.outputs.spec_path }}
           postman-api-key: ${{ secrets.POSTMAN_API_KEY }}
           postman-access-token: ${{ secrets.POSTMAN_ACCESS_TOKEN }}
-          postman-team-id: ${{ env.POSTMAN_TEAM_ID }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           gh-fallback-token: ${{ secrets.GH_FALLBACK_TOKEN }}
-          enable-insights: 'false'
+          org-mode: ${{ env.POSTMAN_TEAM_ID != '' && 'true' || 'false' }}
 
       - id: anchor_state
         name: Resolve Anchor State
         env:
-          WORKSPACE_ID: ${{ steps.onboard.outputs.workspace-id || steps.existing.outputs.workspace_id || env.POSTMAN_SHARED_WORKSPACE_ID }}
-          SPEC_ID: ${{ steps.onboard.outputs.spec-id || steps.existing.outputs.spec_id }}
-          BASELINE_COLLECTION_ID: ${{ steps.onboard.outputs.collections-json != '' && fromJSON(steps.onboard.outputs.collections-json).baseline || steps.existing.outputs.baseline_collection_id }}
-          SMOKE_COLLECTION_ID: ${{ steps.onboard.outputs.collections-json != '' && fromJSON(steps.onboard.outputs.collections-json).smoke || steps.existing.outputs.smoke_collection_id }}
-          CONTRACT_COLLECTION_ID: ${{ steps.onboard.outputs.collections-json != '' && fromJSON(steps.onboard.outputs.collections-json).contract || steps.existing.outputs.contract_collection_id }}
-          MONITOR_ID: ${{ steps.onboard.outputs.monitor-id || steps.existing.outputs.monitor_id }}
-          MOCK_URL: ${{ steps.onboard.outputs.mock-url || steps.existing.outputs.mock_url }}
-          ENVIRONMENT_UIDS_JSON: ${{ steps.onboard.outputs.environment-uids-json || steps.existing.outputs.environment_uids_json || '{}' }}
+          WORKSPACE_STRATEGY: ${{ env.POSTMAN_WORKSPACE_STRATEGY }}
+          BOOTSTRAP_WORKSPACE_ID: ${{ steps.anchor_bootstrap_shared.outputs.workspace-id || steps.anchor_bootstrap_fresh.outputs.workspace-id }}
+          EXISTING_WORKSPACE_ID: ${{ steps.existing.outputs.workspace_id }}
+          SHARED_WORKSPACE_ID: ${{ env.POSTMAN_SHARED_WORKSPACE_ID }}
+          BOOTSTRAP_SPEC_ID: ${{ steps.anchor_bootstrap_shared.outputs.spec-id || steps.anchor_bootstrap_fresh.outputs.spec-id }}
+          EXISTING_SPEC_ID: ${{ steps.existing.outputs.spec_id }}
+          BOOTSTRAP_COLLECTIONS_JSON: ${{ steps.anchor_bootstrap_shared.outputs.collections-json || steps.anchor_bootstrap_fresh.outputs.collections-json }}
+          EXISTING_BASELINE_COLLECTION_ID: ${{ steps.existing.outputs.baseline_collection_id }}
+          EXISTING_SMOKE_COLLECTION_ID: ${{ steps.existing.outputs.smoke_collection_id }}
+          EXISTING_CONTRACT_COLLECTION_ID: ${{ steps.existing.outputs.contract_collection_id }}
+          REPO_SYNC_MONITOR_ID: ${{ steps.anchor_repo_sync.outputs.monitor-id }}
+          EXISTING_MONITOR_ID: ${{ steps.existing.outputs.monitor_id }}
+          REPO_SYNC_MOCK_URL: ${{ steps.anchor_repo_sync.outputs.mock-url }}
+          EXISTING_MOCK_URL: ${{ steps.existing.outputs.mock_url }}
+          REPO_SYNC_ENVIRONMENT_UIDS_JSON: ${{ steps.anchor_repo_sync.outputs.environment-uids-json }}
+          EXISTING_ENVIRONMENT_UIDS_JSON: ${{ steps.existing.outputs.environment_uids_json }}
         run: |
           node <<'NODE'
           const fs = require('node:fs');
+          const freshRun = String(process.env.WORKSPACE_STRATEGY || '').trim() === 'fresh-run';
+          const first = (...values) => values.find((value) => String(value || '').trim() !== '') || '';
+          let bootstrapCollections = {};
+          try {
+            bootstrapCollections = JSON.parse(process.env.BOOTSTRAP_COLLECTIONS_JSON || '{}');
+          } catch {
+            bootstrapCollections = {};
+          }
+
           const collections = {
-            baseline: process.env.BASELINE_COLLECTION_ID || '',
-            smoke: process.env.SMOKE_COLLECTION_ID || '',
-            contract: process.env.CONTRACT_COLLECTION_ID || ''
+            baseline: freshRun
+              ? first(bootstrapCollections.baseline)
+              : first(bootstrapCollections.baseline, process.env.EXISTING_BASELINE_COLLECTION_ID),
+            smoke: freshRun
+              ? first(bootstrapCollections.smoke)
+              : first(bootstrapCollections.smoke, process.env.EXISTING_SMOKE_COLLECTION_ID),
+            contract: freshRun
+              ? first(bootstrapCollections.contract)
+              : first(bootstrapCollections.contract, process.env.EXISTING_CONTRACT_COLLECTION_ID)
           };
           const outputs = {
-            workspace_id: process.env.WORKSPACE_ID || '',
-            spec_id: process.env.SPEC_ID || '',
+            workspace_id: freshRun
+              ? first(process.env.BOOTSTRAP_WORKSPACE_ID)
+              : first(process.env.BOOTSTRAP_WORKSPACE_ID, process.env.EXISTING_WORKSPACE_ID, process.env.SHARED_WORKSPACE_ID),
+            spec_id: freshRun
+              ? first(process.env.BOOTSTRAP_SPEC_ID)
+              : first(process.env.BOOTSTRAP_SPEC_ID, process.env.EXISTING_SPEC_ID),
             baseline_collection_id: collections.baseline,
             smoke_collection_id: collections.smoke,
             contract_collection_id: collections.contract,
-            monitor_id: process.env.MONITOR_ID || '',
-            mock_url: process.env.MOCK_URL || '',
-            environment_uids_json: process.env.ENVIRONMENT_UIDS_JSON || '{}',
+            monitor_id: freshRun
+              ? first(process.env.REPO_SYNC_MONITOR_ID)
+              : first(process.env.REPO_SYNC_MONITOR_ID, process.env.EXISTING_MONITOR_ID),
+            mock_url: freshRun
+              ? first(process.env.REPO_SYNC_MOCK_URL)
+              : first(process.env.REPO_SYNC_MOCK_URL, process.env.EXISTING_MOCK_URL),
+            environment_uids_json: freshRun
+              ? first(process.env.REPO_SYNC_ENVIRONMENT_UIDS_JSON, '{}')
+              : first(process.env.REPO_SYNC_ENVIRONMENT_UIDS_JSON, process.env.EXISTING_ENVIRONMENT_UIDS_JSON, '{}'),
             collections_json: JSON.stringify(collections)
           };
 
           for (const [key, value] of Object.entries(outputs)) {
             fs.appendFileSync(process.env.GITHUB_OUTPUT, `${key}=${value}\n`);
+          }
+          NODE
+
+      - name: Validate Anchor Fresh-Run Isolation
+        if: env.POSTMAN_WORKSPACE_STRATEGY == 'fresh-run' && steps.anchor_mode.outputs.reuse_existing != 'true'
+        env:
+          WORKSPACE_ID: ${{ steps.anchor_state.outputs.workspace_id }}
+          SHARED_WORKSPACE_ID: ${{ env.POSTMAN_SHARED_WORKSPACE_ID }}
+          EXISTING_WORKSPACE_ID: ${{ steps.existing.outputs.workspace_id }}
+          SPEC_ID: ${{ steps.anchor_state.outputs.spec_id }}
+          EXISTING_SPEC_ID: ${{ steps.existing.outputs.spec_id }}
+          BASELINE_COLLECTION_ID: ${{ steps.anchor_state.outputs.baseline_collection_id }}
+          EXISTING_BASELINE_COLLECTION_ID: ${{ steps.existing.outputs.baseline_collection_id }}
+          SMOKE_COLLECTION_ID: ${{ steps.anchor_state.outputs.smoke_collection_id }}
+          EXISTING_SMOKE_COLLECTION_ID: ${{ steps.existing.outputs.smoke_collection_id }}
+          CONTRACT_COLLECTION_ID: ${{ steps.anchor_state.outputs.contract_collection_id }}
+          EXISTING_CONTRACT_COLLECTION_ID: ${{ steps.existing.outputs.contract_collection_id }}
+          MONITOR_ID: ${{ steps.anchor_state.outputs.monitor_id }}
+          EXISTING_MONITOR_ID: ${{ steps.existing.outputs.monitor_id }}
+          MOCK_URL: ${{ steps.anchor_state.outputs.mock_url }}
+          EXISTING_MOCK_URL: ${{ steps.existing.outputs.mock_url }}
+          ENVIRONMENT_UIDS_JSON: ${{ steps.anchor_state.outputs.environment_uids_json }}
+          EXISTING_ENVIRONMENT_UIDS_JSON: ${{ steps.existing.outputs.environment_uids_json }}
+        run: |
+          node <<'NODE'
+          const issues = [];
+          const first = (...values) => values.find((value) => String(value || '').trim() !== '') || '';
+          const required = [
+            ['workspace_id', process.env.WORKSPACE_ID],
+            ['spec_id', process.env.SPEC_ID],
+            ['baseline_collection_id', process.env.BASELINE_COLLECTION_ID],
+            ['smoke_collection_id', process.env.SMOKE_COLLECTION_ID],
+            ['contract_collection_id', process.env.CONTRACT_COLLECTION_ID],
+            ['monitor_id', process.env.MONITOR_ID],
+            ['mock_url', process.env.MOCK_URL]
+          ];
+
+          for (const [label, value] of required) {
+            if (String(value || '').trim() === '') {
+              issues.push(`${label} is empty`);
+            }
+          }
+
+          if (
+            String(process.env.SHARED_WORKSPACE_ID || '').trim() !== '' &&
+            process.env.WORKSPACE_ID === process.env.SHARED_WORKSPACE_ID
+          ) {
+            issues.push(`workspace_id reused shared workspace ${process.env.WORKSPACE_ID}`);
+          }
+
+          const comparePairs = [
+            ['workspace_id', process.env.WORKSPACE_ID, first(process.env.EXISTING_WORKSPACE_ID, process.env.SHARED_WORKSPACE_ID)],
+            ['spec_id', process.env.SPEC_ID, process.env.EXISTING_SPEC_ID],
+            ['baseline_collection_id', process.env.BASELINE_COLLECTION_ID, process.env.EXISTING_BASELINE_COLLECTION_ID],
+            ['smoke_collection_id', process.env.SMOKE_COLLECTION_ID, process.env.EXISTING_SMOKE_COLLECTION_ID],
+            ['contract_collection_id', process.env.CONTRACT_COLLECTION_ID, process.env.EXISTING_CONTRACT_COLLECTION_ID],
+            ['monitor_id', process.env.MONITOR_ID, process.env.EXISTING_MONITOR_ID],
+            ['mock_url', process.env.MOCK_URL, process.env.EXISTING_MOCK_URL]
+          ];
+
+          for (const [label, current, previous] of comparePairs) {
+            if (String(previous || '').trim() !== '' && current === previous) {
+              issues.push(`${label} reused existing value ${current}`);
+            }
+          }
+
+          let currentEnvs = {};
+          let existingEnvs = {};
+          try {
+            currentEnvs = JSON.parse(process.env.ENVIRONMENT_UIDS_JSON || '{}');
+          } catch {
+            issues.push('environment_uids_json is not valid JSON');
+          }
+          try {
+            existingEnvs = JSON.parse(process.env.EXISTING_ENVIRONMENT_UIDS_JSON || '{}');
+          } catch {
+            existingEnvs = {};
+          }
+
+          const currentEnvUid = first(
+            currentEnvs.prod,
+            currentEnvs.stage,
+            currentEnvs.staging,
+            ...Object.values(currentEnvs)
+          );
+          const existingEnvUid = first(
+            existingEnvs.prod,
+            existingEnvs.stage,
+            existingEnvs.staging,
+            ...Object.values(existingEnvs)
+          );
+
+          if (!currentEnvUid) {
+            issues.push('environment UID is empty');
+          }
+          if (existingEnvUid && currentEnvUid === existingEnvUid) {
+            issues.push(`environment UID reused existing value ${currentEnvUid}`);
+          }
+
+          if (issues.length > 0) {
+            throw new Error(`Fresh-run anchor isolation failed:\n- ${issues.join('\n- ')}`);
           }
           NODE
 
@@ -286,35 +494,6 @@ jobs:
           poll-timeout-seconds: ${{ env.POSTMAN_INSIGHTS_POLL_TIMEOUT_SECONDS }}
           poll-interval-seconds: ${{ env.POSTMAN_INSIGHTS_POLL_INTERVAL_SECONDS }}
 
-      - id: anchor_export
-        name: Export Anchor Postman Monorepo Artifacts
-        if: steps.anchor_mode.outputs.reuse_existing != 'true'
-        uses: postman-cs/postman-repo-sync-action@98f08e5d3a35ae922bf99aa21d815d64043de6e7
-        with:
-          project-name: ${{ steps.anchor.outputs.project_name }}
-          workspace-id: ${{ steps.anchor_state.outputs.workspace_id }}
-          baseline-collection-id: ${{ steps.anchor_state.outputs.baseline_collection_id }}
-          smoke-collection-id: ${{ steps.anchor_state.outputs.smoke_collection_id }}
-          contract-collection-id: ${{ steps.anchor_state.outputs.contract_collection_id }}
-          monitor-id: ${{ steps.anchor_state.outputs.monitor_id }}
-          mock-url: ${{ steps.anchor_state.outputs.mock_url }}
-          environments-json: ${{ env.POSTMAN_ENVIRONMENTS_JSON }}
-          env-runtime-urls-json: ${{ env.POSTMAN_ENV_RUNTIME_URLS_JSON }}
-          system-env-map-json: ${{ env.POSTMAN_SYSTEM_ENV_MAP_JSON }}
-          environment-uids-json: ${{ steps.anchor_state.outputs.environment_uids_json }}
-          monitor-cron: ${{ env.POSTMAN_MONITOR_CRON }}
-          generate-ci-workflow: 'false'
-          repo-write-mode: none
-          workspace-link-enabled: 'false'
-          artifact-dir: postman/${{ steps.anchor.outputs.project_name }}
-          spec-id: ${{ steps.anchor_state.outputs.spec_id }}
-          spec-path: ${{ steps.anchor.outputs.spec_path }}
-          postman-api-key: ${{ secrets.POSTMAN_API_KEY }}
-          postman-access-token: ${{ secrets.POSTMAN_ACCESS_TOKEN }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          gh-fallback-token: ${{ secrets.GH_FALLBACK_TOKEN }}
-          org-mode: ${{ env.POSTMAN_TEAM_ID != '' && 'true' || 'false' }}
-
       - name: Persist Anchor State Artifact
         run: >
           node scripts/postman/write-spec-state.mjs
@@ -357,6 +536,10 @@ jobs:
       matrix: ${{ fromJSON(needs.resolve-specs.outputs.remaining-spec-matrix) }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Remove Checked-in Postman Resource State For Fresh Runs
+        if: env.POSTMAN_WORKSPACE_STRATEGY == 'fresh-run'
+        run: rm -f .postman/resources.yaml
 
       - id: existing
         name: Load Existing Spec State
@@ -416,16 +599,47 @@ jobs:
           node scripts/postman/build-spec-url.mjs
           --spec-path "${{ matrix.specPath }}"
 
+      - id: sync_inputs
+        name: Resolve Spec Action Inputs
+        env:
+          WORKSPACE_STRATEGY: ${{ env.POSTMAN_WORKSPACE_STRATEGY }}
+          EXISTING_SPEC_ID: ${{ steps.existing.outputs.spec_id }}
+          EXISTING_BASELINE_COLLECTION_ID: ${{ steps.existing.outputs.baseline_collection_id }}
+          EXISTING_SMOKE_COLLECTION_ID: ${{ steps.existing.outputs.smoke_collection_id }}
+          EXISTING_CONTRACT_COLLECTION_ID: ${{ steps.existing.outputs.contract_collection_id }}
+          EXISTING_MONITOR_ID: ${{ steps.existing.outputs.monitor_id }}
+          EXISTING_MOCK_URL: ${{ steps.existing.outputs.mock_url }}
+          EXISTING_ENVIRONMENT_UIDS_JSON: ${{ steps.existing.outputs.environment_uids_json }}
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const freshRun = String(process.env.WORKSPACE_STRATEGY || '').trim() === 'fresh-run';
+          const first = (...values) => values.find((value) => String(value || '').trim() !== '') || '';
+          const outputs = {
+            spec_id: freshRun ? '' : first(process.env.EXISTING_SPEC_ID),
+            baseline_collection_id: freshRun ? '' : first(process.env.EXISTING_BASELINE_COLLECTION_ID),
+            smoke_collection_id: freshRun ? '' : first(process.env.EXISTING_SMOKE_COLLECTION_ID),
+            contract_collection_id: freshRun ? '' : first(process.env.EXISTING_CONTRACT_COLLECTION_ID),
+            monitor_id: freshRun ? '' : first(process.env.EXISTING_MONITOR_ID),
+            mock_url: freshRun ? '' : first(process.env.EXISTING_MOCK_URL),
+            environment_uids_json: freshRun ? '{}' : first(process.env.EXISTING_ENVIRONMENT_UIDS_JSON, '{}')
+          };
+
+          for (const [key, value] of Object.entries(outputs)) {
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, `${key}=${value}\n`);
+          }
+          NODE
+
       - id: bootstrap
         name: Bootstrap Shared Spec Hub Assets
         if: steps.sync_mode.outputs.reuse_existing != 'true'
         uses: postman-cs/postman-bootstrap-action@e52530a0e57a5ce12b9a1d97a49621b6573782df
         with:
           workspace-id: ${{ needs.anchor-onboarding.outputs.workspace-id }}
-          spec-id: ${{ env.POSTMAN_WORKSPACE_STRATEGY == 'fresh-run' && '' || steps.existing.outputs.spec_id }}
-          baseline-collection-id: ${{ env.POSTMAN_WORKSPACE_STRATEGY == 'fresh-run' && '' || steps.existing.outputs.baseline_collection_id }}
-          smoke-collection-id: ${{ env.POSTMAN_WORKSPACE_STRATEGY == 'fresh-run' && '' || steps.existing.outputs.smoke_collection_id }}
-          contract-collection-id: ${{ env.POSTMAN_WORKSPACE_STRATEGY == 'fresh-run' && '' || steps.existing.outputs.contract_collection_id }}
+          spec-id: ${{ steps.sync_inputs.outputs.spec_id }}
+          baseline-collection-id: ${{ steps.sync_inputs.outputs.baseline_collection_id }}
+          smoke-collection-id: ${{ steps.sync_inputs.outputs.smoke_collection_id }}
+          contract-collection-id: ${{ steps.sync_inputs.outputs.contract_collection_id }}
           project-name: ${{ matrix.projectName }}
           domain: ${{ env.POSTMAN_DOMAIN }}
           domain-code: ${{ env.POSTMAN_DOMAIN_CODE }}
@@ -447,12 +661,12 @@ jobs:
           baseline-collection-id: ${{ steps.bootstrap.outputs.baseline-collection-id }}
           smoke-collection-id: ${{ steps.bootstrap.outputs.smoke-collection-id }}
           contract-collection-id: ${{ steps.bootstrap.outputs.contract-collection-id }}
-          monitor-id: ${{ env.POSTMAN_WORKSPACE_STRATEGY == 'fresh-run' && '' || steps.existing.outputs.monitor_id }}
-          mock-url: ${{ env.POSTMAN_WORKSPACE_STRATEGY == 'fresh-run' && '' || steps.existing.outputs.mock_url }}
+          monitor-id: ${{ steps.sync_inputs.outputs.monitor_id }}
+          mock-url: ${{ steps.sync_inputs.outputs.mock_url }}
           environments-json: ${{ env.POSTMAN_ENVIRONMENTS_JSON }}
           env-runtime-urls-json: ${{ env.POSTMAN_ENV_RUNTIME_URLS_JSON }}
           system-env-map-json: ${{ env.POSTMAN_SYSTEM_ENV_MAP_JSON }}
-          environment-uids-json: ${{ env.POSTMAN_WORKSPACE_STRATEGY == 'fresh-run' && '{}' || steps.existing.outputs.environment_uids_json }}
+          environment-uids-json: ${{ steps.sync_inputs.outputs.environment_uids_json }}
           monitor-cron: ${{ env.POSTMAN_MONITOR_CRON }}
           generate-ci-workflow: 'false'
           repo-write-mode: none
@@ -469,30 +683,153 @@ jobs:
       - id: sync_state
         name: Resolve Spec State
         env:
+          WORKSPACE_STRATEGY: ${{ env.POSTMAN_WORKSPACE_STRATEGY }}
           WORKSPACE_ID: ${{ needs.anchor-onboarding.outputs.workspace-id }}
-          SPEC_ID: ${{ steps.bootstrap.outputs.spec-id || steps.existing.outputs.spec_id }}
-          BASELINE_COLLECTION_ID: ${{ steps.bootstrap.outputs.baseline-collection-id || steps.existing.outputs.baseline_collection_id }}
-          SMOKE_COLLECTION_ID: ${{ steps.bootstrap.outputs.smoke-collection-id || steps.existing.outputs.smoke_collection_id }}
-          CONTRACT_COLLECTION_ID: ${{ steps.bootstrap.outputs.contract-collection-id || steps.existing.outputs.contract_collection_id }}
-          MONITOR_ID: ${{ steps.repo_sync.outputs.monitor-id || steps.existing.outputs.monitor_id }}
-          MOCK_URL: ${{ steps.repo_sync.outputs.mock-url || steps.existing.outputs.mock_url }}
-          ENVIRONMENT_UIDS_JSON: ${{ steps.repo_sync.outputs.environment-uids-json || steps.existing.outputs.environment_uids_json || '{}' }}
+          BOOTSTRAP_SPEC_ID: ${{ steps.bootstrap.outputs.spec-id }}
+          EXISTING_SPEC_ID: ${{ steps.existing.outputs.spec_id }}
+          BOOTSTRAP_BASELINE_COLLECTION_ID: ${{ steps.bootstrap.outputs.baseline-collection-id }}
+          EXISTING_BASELINE_COLLECTION_ID: ${{ steps.existing.outputs.baseline_collection_id }}
+          BOOTSTRAP_SMOKE_COLLECTION_ID: ${{ steps.bootstrap.outputs.smoke-collection-id }}
+          EXISTING_SMOKE_COLLECTION_ID: ${{ steps.existing.outputs.smoke_collection_id }}
+          BOOTSTRAP_CONTRACT_COLLECTION_ID: ${{ steps.bootstrap.outputs.contract-collection-id }}
+          EXISTING_CONTRACT_COLLECTION_ID: ${{ steps.existing.outputs.contract_collection_id }}
+          REPO_SYNC_MONITOR_ID: ${{ steps.repo_sync.outputs.monitor-id }}
+          EXISTING_MONITOR_ID: ${{ steps.existing.outputs.monitor_id }}
+          REPO_SYNC_MOCK_URL: ${{ steps.repo_sync.outputs.mock-url }}
+          EXISTING_MOCK_URL: ${{ steps.existing.outputs.mock_url }}
+          REPO_SYNC_ENVIRONMENT_UIDS_JSON: ${{ steps.repo_sync.outputs.environment-uids-json }}
+          EXISTING_ENVIRONMENT_UIDS_JSON: ${{ steps.existing.outputs.environment_uids_json }}
         run: |
           node <<'NODE'
           const fs = require('node:fs');
+          const freshRun = String(process.env.WORKSPACE_STRATEGY || '').trim() === 'fresh-run';
+          const first = (...values) => values.find((value) => String(value || '').trim() !== '') || '';
           const outputs = {
             workspace_id: process.env.WORKSPACE_ID || '',
-            spec_id: process.env.SPEC_ID || '',
-            baseline_collection_id: process.env.BASELINE_COLLECTION_ID || '',
-            smoke_collection_id: process.env.SMOKE_COLLECTION_ID || '',
-            contract_collection_id: process.env.CONTRACT_COLLECTION_ID || '',
-            monitor_id: process.env.MONITOR_ID || '',
-            mock_url: process.env.MOCK_URL || '',
-            environment_uids_json: process.env.ENVIRONMENT_UIDS_JSON || '{}'
+            spec_id: freshRun
+              ? first(process.env.BOOTSTRAP_SPEC_ID)
+              : first(process.env.BOOTSTRAP_SPEC_ID, process.env.EXISTING_SPEC_ID),
+            baseline_collection_id: freshRun
+              ? first(process.env.BOOTSTRAP_BASELINE_COLLECTION_ID)
+              : first(process.env.BOOTSTRAP_BASELINE_COLLECTION_ID, process.env.EXISTING_BASELINE_COLLECTION_ID),
+            smoke_collection_id: freshRun
+              ? first(process.env.BOOTSTRAP_SMOKE_COLLECTION_ID)
+              : first(process.env.BOOTSTRAP_SMOKE_COLLECTION_ID, process.env.EXISTING_SMOKE_COLLECTION_ID),
+            contract_collection_id: freshRun
+              ? first(process.env.BOOTSTRAP_CONTRACT_COLLECTION_ID)
+              : first(process.env.BOOTSTRAP_CONTRACT_COLLECTION_ID, process.env.EXISTING_CONTRACT_COLLECTION_ID),
+            monitor_id: freshRun
+              ? first(process.env.REPO_SYNC_MONITOR_ID)
+              : first(process.env.REPO_SYNC_MONITOR_ID, process.env.EXISTING_MONITOR_ID),
+            mock_url: freshRun
+              ? first(process.env.REPO_SYNC_MOCK_URL)
+              : first(process.env.REPO_SYNC_MOCK_URL, process.env.EXISTING_MOCK_URL),
+            environment_uids_json: freshRun
+              ? first(process.env.REPO_SYNC_ENVIRONMENT_UIDS_JSON, '{}')
+              : first(process.env.REPO_SYNC_ENVIRONMENT_UIDS_JSON, process.env.EXISTING_ENVIRONMENT_UIDS_JSON, '{}')
           };
 
           for (const [key, value] of Object.entries(outputs)) {
             fs.appendFileSync(process.env.GITHUB_OUTPUT, `${key}=${value}\n`);
+          }
+          NODE
+
+      - name: Validate Fresh-Run Spec Isolation
+        if: env.POSTMAN_WORKSPACE_STRATEGY == 'fresh-run' && steps.sync_mode.outputs.reuse_existing != 'true'
+        env:
+          WORKSPACE_ID: ${{ steps.sync_state.outputs.workspace_id }}
+          SHARED_WORKSPACE_ID: ${{ env.POSTMAN_SHARED_WORKSPACE_ID }}
+          SPEC_ID: ${{ steps.sync_state.outputs.spec_id }}
+          EXISTING_SPEC_ID: ${{ steps.existing.outputs.spec_id }}
+          BASELINE_COLLECTION_ID: ${{ steps.sync_state.outputs.baseline_collection_id }}
+          EXISTING_BASELINE_COLLECTION_ID: ${{ steps.existing.outputs.baseline_collection_id }}
+          SMOKE_COLLECTION_ID: ${{ steps.sync_state.outputs.smoke_collection_id }}
+          EXISTING_SMOKE_COLLECTION_ID: ${{ steps.existing.outputs.smoke_collection_id }}
+          CONTRACT_COLLECTION_ID: ${{ steps.sync_state.outputs.contract_collection_id }}
+          EXISTING_CONTRACT_COLLECTION_ID: ${{ steps.existing.outputs.contract_collection_id }}
+          MONITOR_ID: ${{ steps.sync_state.outputs.monitor_id }}
+          EXISTING_MONITOR_ID: ${{ steps.existing.outputs.monitor_id }}
+          MOCK_URL: ${{ steps.sync_state.outputs.mock_url }}
+          EXISTING_MOCK_URL: ${{ steps.existing.outputs.mock_url }}
+          ENVIRONMENT_UIDS_JSON: ${{ steps.sync_state.outputs.environment_uids_json }}
+          EXISTING_ENVIRONMENT_UIDS_JSON: ${{ steps.existing.outputs.environment_uids_json }}
+        run: |
+          node <<'NODE'
+          const issues = [];
+          const first = (...values) => values.find((value) => String(value || '').trim() !== '') || '';
+          const required = [
+            ['workspace_id', process.env.WORKSPACE_ID],
+            ['spec_id', process.env.SPEC_ID],
+            ['baseline_collection_id', process.env.BASELINE_COLLECTION_ID],
+            ['smoke_collection_id', process.env.SMOKE_COLLECTION_ID],
+            ['contract_collection_id', process.env.CONTRACT_COLLECTION_ID],
+            ['monitor_id', process.env.MONITOR_ID],
+            ['mock_url', process.env.MOCK_URL]
+          ];
+
+          for (const [label, value] of required) {
+            if (String(value || '').trim() === '') {
+              issues.push(`${label} is empty`);
+            }
+          }
+
+          if (
+            String(process.env.SHARED_WORKSPACE_ID || '').trim() !== '' &&
+            process.env.WORKSPACE_ID === process.env.SHARED_WORKSPACE_ID
+          ) {
+            issues.push(`workspace_id reused shared workspace ${process.env.WORKSPACE_ID}`);
+          }
+
+          const comparePairs = [
+            ['spec_id', process.env.SPEC_ID, process.env.EXISTING_SPEC_ID],
+            ['baseline_collection_id', process.env.BASELINE_COLLECTION_ID, process.env.EXISTING_BASELINE_COLLECTION_ID],
+            ['smoke_collection_id', process.env.SMOKE_COLLECTION_ID, process.env.EXISTING_SMOKE_COLLECTION_ID],
+            ['contract_collection_id', process.env.CONTRACT_COLLECTION_ID, process.env.EXISTING_CONTRACT_COLLECTION_ID],
+            ['monitor_id', process.env.MONITOR_ID, process.env.EXISTING_MONITOR_ID],
+            ['mock_url', process.env.MOCK_URL, process.env.EXISTING_MOCK_URL]
+          ];
+
+          for (const [label, current, previous] of comparePairs) {
+            if (String(previous || '').trim() !== '' && current === previous) {
+              issues.push(`${label} reused existing value ${current}`);
+            }
+          }
+
+          let currentEnvs = {};
+          let existingEnvs = {};
+          try {
+            currentEnvs = JSON.parse(process.env.ENVIRONMENT_UIDS_JSON || '{}');
+          } catch {
+            issues.push('environment_uids_json is not valid JSON');
+          }
+          try {
+            existingEnvs = JSON.parse(process.env.EXISTING_ENVIRONMENT_UIDS_JSON || '{}');
+          } catch {
+            existingEnvs = {};
+          }
+
+          const currentEnvUid = first(
+            currentEnvs.prod,
+            currentEnvs.stage,
+            currentEnvs.staging,
+            ...Object.values(currentEnvs)
+          );
+          const existingEnvUid = first(
+            existingEnvs.prod,
+            existingEnvs.stage,
+            existingEnvs.staging,
+            ...Object.values(existingEnvs)
+          );
+
+          if (!currentEnvUid) {
+            issues.push('environment UID is empty');
+          }
+          if (existingEnvUid && currentEnvUid === existingEnvUid) {
+            issues.push(`environment UID reused existing value ${currentEnvUid}`);
+          }
+
+          if (issues.length > 0) {
+            throw new Error(`Fresh-run spec isolation failed:\n- ${issues.join('\n- ')}`);
           }
           NODE
 
