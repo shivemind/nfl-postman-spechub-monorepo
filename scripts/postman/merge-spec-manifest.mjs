@@ -84,16 +84,33 @@ const currentSpecs = (() => {
   return Array.from(specsByPath.values()).sort((left, right) => left.specPath.localeCompare(right.specPath));
 })();
 
+function resolveWorkspaceId(manifestWorkspaceId, specs, statesBySpecPath) {
+  const stateWorkspaceIds = new Set();
+
+  for (const spec of specs) {
+    const workspaceId = String(statesBySpecPath.get(spec.specPath)?.workspaceId || '').trim();
+    if (workspaceId) {
+      stateWorkspaceIds.add(workspaceId);
+    }
+  }
+
+  if (stateWorkspaceIds.size > 1) {
+    throw new Error(`Expected one workspace ID across merged state files, found: ${Array.from(stateWorkspaceIds).join(', ')}`);
+  }
+
+  if (stateWorkspaceIds.size === 1) {
+    return Array.from(stateWorkspaceIds)[0];
+  }
+
+  return String(manifestWorkspaceId || '').trim();
+}
+
 const specs = {};
-let workspaceId = manifest.workspaceId;
+const workspaceId = resolveWorkspaceId(manifest.workspaceId, currentSpecs, stateBySpecPath);
 
 for (const spec of currentSpecs) {
   const state = stateBySpecPath.get(spec.specPath) || manifest.specs?.[spec.specPath] || {};
   const resolvedWorkspaceId = String(state.workspaceId || workspaceId || '').trim();
-
-  if (resolvedWorkspaceId && !workspaceId) {
-    workspaceId = resolvedWorkspaceId;
-  }
 
   specs[spec.specPath] = {
     projectName: String(state.projectName || spec.projectName || projectNameFromSpecPath(spec.specPath)).trim(),
