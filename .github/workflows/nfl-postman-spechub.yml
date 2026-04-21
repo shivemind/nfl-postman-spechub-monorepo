@@ -630,9 +630,9 @@ jobs:
           }
           NODE
 
-      - id: bootstrap
+      - id: bootstrap_shared
         name: Bootstrap Shared Spec Hub Assets
-        if: steps.sync_mode.outputs.reuse_existing != 'true'
+        if: steps.sync_mode.outputs.reuse_existing != 'true' && env.POSTMAN_WORKSPACE_STRATEGY != 'fresh-run'
         uses: postman-cs/postman-bootstrap-action@e52530a0e57a5ce12b9a1d97a49621b6573782df
         with:
           workspace-id: ${{ needs.anchor-onboarding.outputs.workspace-id }}
@@ -651,6 +651,26 @@ jobs:
           postman-api-key: ${{ secrets.POSTMAN_API_KEY }}
           postman-access-token: ${{ secrets.POSTMAN_ACCESS_TOKEN }}
 
+      - id: bootstrap_fresh
+        name: Bootstrap Shared Spec Hub Assets
+        if: steps.sync_mode.outputs.reuse_existing != 'true' && env.POSTMAN_WORKSPACE_STRATEGY == 'fresh-run'
+        uses: postman-cs/postman-bootstrap-action@e52530a0e57a5ce12b9a1d97a49621b6573782df
+        with:
+          workspace-id: ${{ needs.anchor-onboarding.outputs.workspace-id }}
+          spec-id: ${{ steps.sync_inputs.outputs.spec_id }}
+          baseline-collection-id: ${{ steps.sync_inputs.outputs.baseline_collection_id }}
+          smoke-collection-id: ${{ steps.sync_inputs.outputs.smoke_collection_id }}
+          contract-collection-id: ${{ steps.sync_inputs.outputs.contract_collection_id }}
+          project-name: ${{ matrix.projectName }}
+          domain: ${{ env.POSTMAN_DOMAIN }}
+          domain-code: ${{ env.POSTMAN_DOMAIN_CODE }}
+          requester-email: ${{ env.POSTMAN_REQUESTER_EMAIL }}
+          workspace-admin-user-ids: ${{ env.POSTMAN_WORKSPACE_ADMIN_USER_IDS }}
+          workspace-team-id: ${{ env.POSTMAN_WORKSPACE_TEAM_ID }}
+          spec-url: ${{ steps.spec_url.outputs.spec_url }}
+          governance-mapping-json: ${{ env.POSTMAN_GOVERNANCE_MAPPING_JSON }}
+          postman-api-key: ${{ secrets.POSTMAN_API_KEY }}
+
       - id: repo_sync
         name: Materialize Environments, Mocks, and Monitors
         if: steps.sync_mode.outputs.reuse_existing != 'true'
@@ -658,9 +678,9 @@ jobs:
         with:
           project-name: ${{ matrix.projectName }}
           workspace-id: ${{ needs.anchor-onboarding.outputs.workspace-id }}
-          baseline-collection-id: ${{ steps.bootstrap.outputs.baseline-collection-id }}
-          smoke-collection-id: ${{ steps.bootstrap.outputs.smoke-collection-id }}
-          contract-collection-id: ${{ steps.bootstrap.outputs.contract-collection-id }}
+          baseline-collection-id: ${{ steps.bootstrap_shared.outputs.baseline-collection-id || steps.bootstrap_fresh.outputs.baseline-collection-id }}
+          smoke-collection-id: ${{ steps.bootstrap_shared.outputs.smoke-collection-id || steps.bootstrap_fresh.outputs.smoke-collection-id }}
+          contract-collection-id: ${{ steps.bootstrap_shared.outputs.contract-collection-id || steps.bootstrap_fresh.outputs.contract-collection-id }}
           monitor-id: ${{ steps.sync_inputs.outputs.monitor_id }}
           mock-url: ${{ steps.sync_inputs.outputs.mock_url }}
           environments-json: ${{ env.POSTMAN_ENVIRONMENTS_JSON }}
@@ -672,7 +692,7 @@ jobs:
           repo-write-mode: none
           workspace-link-enabled: 'false'
           artifact-dir: postman/${{ matrix.projectName }}
-          spec-id: ${{ steps.bootstrap.outputs.spec-id }}
+          spec-id: ${{ steps.bootstrap_shared.outputs.spec-id || steps.bootstrap_fresh.outputs.spec-id }}
           spec-path: ${{ matrix.specPath }}
           postman-api-key: ${{ secrets.POSTMAN_API_KEY }}
           postman-access-token: ${{ secrets.POSTMAN_ACCESS_TOKEN }}
@@ -685,13 +705,13 @@ jobs:
         env:
           WORKSPACE_STRATEGY: ${{ env.POSTMAN_WORKSPACE_STRATEGY }}
           WORKSPACE_ID: ${{ needs.anchor-onboarding.outputs.workspace-id }}
-          BOOTSTRAP_SPEC_ID: ${{ steps.bootstrap.outputs.spec-id }}
+          BOOTSTRAP_SPEC_ID: ${{ steps.bootstrap_shared.outputs.spec-id || steps.bootstrap_fresh.outputs.spec-id }}
           EXISTING_SPEC_ID: ${{ steps.existing.outputs.spec_id }}
-          BOOTSTRAP_BASELINE_COLLECTION_ID: ${{ steps.bootstrap.outputs.baseline-collection-id }}
+          BOOTSTRAP_BASELINE_COLLECTION_ID: ${{ steps.bootstrap_shared.outputs.baseline-collection-id || steps.bootstrap_fresh.outputs.baseline-collection-id }}
           EXISTING_BASELINE_COLLECTION_ID: ${{ steps.existing.outputs.baseline_collection_id }}
-          BOOTSTRAP_SMOKE_COLLECTION_ID: ${{ steps.bootstrap.outputs.smoke-collection-id }}
+          BOOTSTRAP_SMOKE_COLLECTION_ID: ${{ steps.bootstrap_shared.outputs.smoke-collection-id || steps.bootstrap_fresh.outputs.smoke-collection-id }}
           EXISTING_SMOKE_COLLECTION_ID: ${{ steps.existing.outputs.smoke_collection_id }}
-          BOOTSTRAP_CONTRACT_COLLECTION_ID: ${{ steps.bootstrap.outputs.contract-collection-id }}
+          BOOTSTRAP_CONTRACT_COLLECTION_ID: ${{ steps.bootstrap_shared.outputs.contract-collection-id || steps.bootstrap_fresh.outputs.contract-collection-id }}
           EXISTING_CONTRACT_COLLECTION_ID: ${{ steps.existing.outputs.contract_collection_id }}
           REPO_SYNC_MONITOR_ID: ${{ steps.repo_sync.outputs.monitor-id }}
           EXISTING_MONITOR_ID: ${{ steps.existing.outputs.monitor_id }}
