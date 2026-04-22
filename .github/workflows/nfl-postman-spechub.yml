@@ -288,8 +288,9 @@ jobs:
           environment-uids-json: ${{ steps.anchor_inputs.outputs.environment_uids_json }}
           monitor-cron: ${{ env.POSTMAN_MONITOR_CRON }}
           generate-ci-workflow: 'false'
+          repo-url: ${{ github.server_url }}/${{ github.repository }}
           repo-write-mode: none
-          workspace-link-enabled: 'false'
+          workspace-link-enabled: 'true'
           artifact-dir: postman/${{ steps.anchor.outputs.project_name }}
           spec-id: ${{ steps.anchor_bootstrap_shared.outputs.spec-id || steps.anchor_bootstrap_fresh.outputs.spec-id }}
           spec-path: ${{ steps.anchor.outputs.spec_path }}
@@ -787,8 +788,9 @@ jobs:
           environment-uids-json: ${{ steps.sync_inputs.outputs.environment_uids_json }}
           monitor-cron: ${{ env.POSTMAN_MONITOR_CRON }}
           generate-ci-workflow: 'false'
+          repo-url: ${{ github.server_url }}/${{ github.repository }}
           repo-write-mode: none
-          workspace-link-enabled: 'false'
+          workspace-link-enabled: 'true'
           artifact-dir: postman/${{ matrix.projectName }}
           spec-id: ${{ steps.bootstrap_shared.outputs.spec-id || steps.bootstrap_fresh.outputs.spec-id }}
           spec-path: ${{ matrix.specPath }}
