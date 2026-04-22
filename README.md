@@ -163,7 +163,7 @@ The pipeline leans on Postman's native Git integration through the `postman-cs` 
 The pipeline uses the Postman CLI in two ways:
 
 - `postman-bootstrap-action` lints the uploaded spec by Postman spec UID and exposes a `lint-summary-json` output.
-- The top-level workflow runs generated smoke and contract collections with `postmanlabs/postman-cli-action@v1` when `POSTMAN_ENV_RUNTIME_URLS_JSON` is configured.
+- The top-level workflow runs generated smoke and contract collections with `postmanlabs/postman-cli-action@v1`, preferring `POSTMAN_ENV_RUNTIME_URLS_JSON` and falling back to the generated mock URL when no runtime URL is configured.
 
 What that means in practice:
 
@@ -218,8 +218,9 @@ The CLI does not create governance groups by itself. Instead, the actions use Po
 6. Decide the workspace operating model:
    - use `shared` for the NFL production catalog and idempotent reruns
    - use `fresh-run` for isolated monorepo snapshot workspaces
-7. Configure runtime URLs if you want smoke and contract execution in CI:
+7. Configure runtime URLs if you want smoke and contract execution against live services in CI:
    - example `POSTMAN_ENV_RUNTIME_URLS_JSON={"prod":"https://api.nfl.example.com"}`
+   - when this map is blank, the workflow falls back to each spec's generated mock URL so smoke and contract runs stay idempotent
 8. Configure Insights only when the services are actually discoverable:
    - `POSTMAN_ENABLE_INSIGHTS=true`
    - `POSTMAN_INSIGHTS_CLUSTER_NAME=<cluster-name>`
@@ -250,6 +251,7 @@ The CLI does not create governance groups by itself. Instead, the actions use Po
   Example: `["prod","stage"]`
 - `POSTMAN_ENV_RUNTIME_URLS_JSON`
   Example: `{"prod":"https://api.nfl.example.com","stage":"https://stage-api.nfl.example.com"}`
+  If omitted, CI smoke and contract runs fall back to the generated mock URL for the selected spec.
 - `POSTMAN_SYSTEM_ENV_MAP_JSON`
   Example: `{"prod":"<system-env-uuid>","stage":"<system-env-uuid>"}`
 - `POSTMAN_GOVERNANCE_MAPPING_JSON`

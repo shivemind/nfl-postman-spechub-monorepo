@@ -435,46 +435,47 @@ jobs:
           }
           NODE
 
-      - id: anchor_env
-        name: Resolve Anchor Environment UID
-        env:
-          ENV_UIDS_JSON: ${{ steps.anchor_state.outputs.environment_uids_json }}
-        run: |
-          node <<'NODE'
-          const envs = JSON.parse(process.env.ENV_UIDS_JSON || '{}');
-          const selected = envs.prod || envs.stage || envs.staging || Object.values(envs)[0] || '';
-          require('node:fs').appendFileSync(process.env.GITHUB_OUTPUT, `environment_uid=${selected}\n`);
-          NODE
+      - id: anchor_run_inputs
+        name: Resolve Anchor Collection Run Inputs
+        run: >
+          node scripts/postman/resolve-collection-run-inputs.mjs
+          --environment-uids-json '${{ steps.anchor_state.outputs.environment_uids_json }}'
+          --env-runtime-urls-json '${{ env.POSTMAN_ENV_RUNTIME_URLS_JSON }}'
+          --mock-url '${{ steps.anchor_state.outputs.mock_url }}'
 
       - name: Run Anchor Smoke Collection
-        if: steps.anchor_env.outputs.environment_uid != '' && env.POSTMAN_ENV_RUNTIME_URLS_JSON != '{}' && env.POSTMAN_ENV_RUNTIME_URLS_JSON != ''
+        if: steps.anchor_run_inputs.outputs.can_run == 'true' && steps.anchor_state.outputs.smoke_collection_id != ''
         uses: postmanlabs/postman-cli-action@v1
         with:
           command: >-
             collection run ${{ steps.anchor_state.outputs.smoke_collection_id }}
-            --environment ${{ steps.anchor_env.outputs.environment_uid }}
+            --environment ${{ steps.anchor_run_inputs.outputs.environment_uid }}
+            ${{ format('--env-var "baseUrl={0}"', steps.anchor_run_inputs.outputs.runtime_url) }}
+            ${{ steps.anchor_run_inputs.outputs.ci_override == 'true' && '--env-var "CI=true"' || '' }}
           api-key: ${{ secrets.POSTMAN_API_KEY }}
 
       - name: Run Anchor Contract Collection
-        if: steps.anchor_env.outputs.environment_uid != '' && env.POSTMAN_ENV_RUNTIME_URLS_JSON != '{}' && env.POSTMAN_ENV_RUNTIME_URLS_JSON != ''
+        if: steps.anchor_run_inputs.outputs.can_run == 'true' && steps.anchor_state.outputs.contract_collection_id != ''
         uses: postmanlabs/postman-cli-action@v1
         with:
           command: >-
             collection run ${{ steps.anchor_state.outputs.contract_collection_id }}
-            --environment ${{ steps.anchor_env.outputs.environment_uid }}
+            --environment ${{ steps.anchor_run_inputs.outputs.environment_uid }}
+            ${{ format('--env-var "baseUrl={0}"', steps.anchor_run_inputs.outputs.runtime_url) }}
+            ${{ steps.anchor_run_inputs.outputs.ci_override == 'true' && '--env-var "CI=true"' || '' }}
           api-key: ${{ secrets.POSTMAN_API_KEY }}
 
       - name: Anchor Insights Onboarding
         if: >
           (((github.event_name == 'workflow_dispatch' && github.event.inputs.enable_insights == 'true') ||
           env.POSTMAN_ENABLE_INSIGHTS == 'true')) &&
-          steps.anchor_env.outputs.environment_uid != ''
+          steps.anchor_run_inputs.outputs.environment_uid != ''
         uses: postman-cs/postman-insights-onboarding-action@5387b8431cf548ab2250945e74612c6f0a9ed56e
         env:
           # Work around GitHub runner input normalization for this Node action.
           INPUT_PROJECT_NAME: ${{ steps.anchor.outputs.project_name }}
           INPUT_WORKSPACE_ID: ${{ steps.anchor_state.outputs.workspace_id }}
-          INPUT_ENVIRONMENT_ID: ${{ steps.anchor_env.outputs.environment_uid }}
+          INPUT_ENVIRONMENT_ID: ${{ steps.anchor_run_inputs.outputs.environment_uid }}
           INPUT_CLUSTER_NAME: ${{ env.POSTMAN_INSIGHTS_CLUSTER_NAME }}
           INPUT_POSTMAN_ACCESS_TOKEN: ${{ secrets.POSTMAN_ACCESS_TOKEN }}
           INPUT_POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
@@ -485,7 +486,7 @@ jobs:
         with:
           project-name: ${{ steps.anchor.outputs.project_name }}
           workspace-id: ${{ steps.anchor_state.outputs.workspace_id }}
-          environment-id: ${{ steps.anchor_env.outputs.environment_uid }}
+          environment-id: ${{ steps.anchor_run_inputs.outputs.environment_uid }}
           cluster-name: ${{ env.POSTMAN_INSIGHTS_CLUSTER_NAME }}
           postman-access-token: ${{ secrets.POSTMAN_ACCESS_TOKEN }}
           postman-api-key: ${{ secrets.POSTMAN_API_KEY }}
@@ -853,46 +854,47 @@ jobs:
           }
           NODE
 
-      - id: env_uid
-        name: Resolve Environment UID
-        env:
-          ENV_UIDS_JSON: ${{ steps.sync_state.outputs.environment_uids_json }}
-        run: |
-          node <<'NODE'
-          const envs = JSON.parse(process.env.ENV_UIDS_JSON || '{}');
-          const selected = envs.prod || envs.stage || envs.staging || Object.values(envs)[0] || '';
-          require('node:fs').appendFileSync(process.env.GITHUB_OUTPUT, `environment_uid=${selected}\n`);
-          NODE
+      - id: run_inputs
+        name: Resolve Collection Run Inputs
+        run: >
+          node scripts/postman/resolve-collection-run-inputs.mjs
+          --environment-uids-json '${{ steps.sync_state.outputs.environment_uids_json }}'
+          --env-runtime-urls-json '${{ env.POSTMAN_ENV_RUNTIME_URLS_JSON }}'
+          --mock-url '${{ steps.sync_state.outputs.mock_url }}'
 
       - name: Run Smoke Collection
-        if: steps.env_uid.outputs.environment_uid != '' && env.POSTMAN_ENV_RUNTIME_URLS_JSON != '{}' && env.POSTMAN_ENV_RUNTIME_URLS_JSON != ''
+        if: steps.run_inputs.outputs.can_run == 'true' && steps.sync_state.outputs.smoke_collection_id != ''
         uses: postmanlabs/postman-cli-action@v1
         with:
           command: >-
             collection run ${{ steps.sync_state.outputs.smoke_collection_id }}
-            --environment ${{ steps.env_uid.outputs.environment_uid }}
+            --environment ${{ steps.run_inputs.outputs.environment_uid }}
+            ${{ format('--env-var "baseUrl={0}"', steps.run_inputs.outputs.runtime_url) }}
+            ${{ steps.run_inputs.outputs.ci_override == 'true' && '--env-var "CI=true"' || '' }}
           api-key: ${{ secrets.POSTMAN_API_KEY }}
 
       - name: Run Contract Collection
-        if: steps.env_uid.outputs.environment_uid != '' && env.POSTMAN_ENV_RUNTIME_URLS_JSON != '{}' && env.POSTMAN_ENV_RUNTIME_URLS_JSON != ''
+        if: steps.run_inputs.outputs.can_run == 'true' && steps.sync_state.outputs.contract_collection_id != ''
         uses: postmanlabs/postman-cli-action@v1
         with:
           command: >-
             collection run ${{ steps.sync_state.outputs.contract_collection_id }}
-            --environment ${{ steps.env_uid.outputs.environment_uid }}
+            --environment ${{ steps.run_inputs.outputs.environment_uid }}
+            ${{ format('--env-var "baseUrl={0}"', steps.run_inputs.outputs.runtime_url) }}
+            ${{ steps.run_inputs.outputs.ci_override == 'true' && '--env-var "CI=true"' || '' }}
           api-key: ${{ secrets.POSTMAN_API_KEY }}
 
       - name: Insights Onboarding
         if: >
           ((github.event_name == 'workflow_dispatch' && github.event.inputs.enable_insights == 'true') ||
           env.POSTMAN_ENABLE_INSIGHTS == 'true') &&
-          steps.env_uid.outputs.environment_uid != ''
+          steps.run_inputs.outputs.environment_uid != ''
         uses: postman-cs/postman-insights-onboarding-action@5387b8431cf548ab2250945e74612c6f0a9ed56e
         env:
           # Work around GitHub runner input normalization for this Node action.
           INPUT_PROJECT_NAME: ${{ matrix.projectName }}
           INPUT_WORKSPACE_ID: ${{ needs.anchor-onboarding.outputs.workspace-id }}
-          INPUT_ENVIRONMENT_ID: ${{ steps.env_uid.outputs.environment_uid }}
+          INPUT_ENVIRONMENT_ID: ${{ steps.run_inputs.outputs.environment_uid }}
           INPUT_CLUSTER_NAME: ${{ env.POSTMAN_INSIGHTS_CLUSTER_NAME }}
           INPUT_POSTMAN_ACCESS_TOKEN: ${{ secrets.POSTMAN_ACCESS_TOKEN }}
           INPUT_POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
@@ -903,7 +905,7 @@ jobs:
         with:
           project-name: ${{ matrix.projectName }}
           workspace-id: ${{ needs.anchor-onboarding.outputs.workspace-id }}
-          environment-id: ${{ steps.env_uid.outputs.environment_uid }}
+          environment-id: ${{ steps.run_inputs.outputs.environment_uid }}
           cluster-name: ${{ env.POSTMAN_INSIGHTS_CLUSTER_NAME }}
           postman-access-token: ${{ secrets.POSTMAN_ACCESS_TOKEN }}
           postman-api-key: ${{ secrets.POSTMAN_API_KEY }}
