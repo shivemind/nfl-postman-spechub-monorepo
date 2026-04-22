@@ -83,25 +83,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - id: anchor_spec_server
-        name: Start Local Spec Server
-        run: |
-          port=8123
-          python3 -m http.server "${port}" --bind 127.0.0.1 >/tmp/anchor-spec-server.log 2>&1 &
-          echo $! >/tmp/anchor-spec-server.pid
-
-          for _ in $(seq 1 20); do
-            if curl -fsS "http://127.0.0.1:${port}/README.md" >/dev/null; then
-              printf 'base_url=http://127.0.0.1:%s\n' "${port}" >> "${GITHUB_OUTPUT}"
-              exit 0
-            fi
-            sleep 1
-          done
-
-          echo "Local spec server did not become ready." >&2
-          cat /tmp/anchor-spec-server.log >&2 || true
-          exit 1
-
       - name: Remove Checked-in Postman Resource State For Fresh Runs
         if: env.POSTMAN_WORKSPACE_STRATEGY == 'fresh-run'
         run: rm -f .postman/resources.yaml
@@ -173,7 +154,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_FALLBACK_TOKEN: ${{ secrets.GH_FALLBACK_TOKEN }}
-          LOCAL_SPEC_BASE_URL: ${{ steps.anchor_spec_server.outputs.base_url }}
           SHIVEMIND_GITHUB_TOKEN: ${{ secrets.SHIVEMIND_GITHUB_TOKEN }}
         run: >
           node scripts/postman/build-spec-url.mjs
@@ -563,13 +543,6 @@ jobs:
           mkdir -p .postman/export-bundles
           tar -C postman -czf ".postman/export-bundles/${{ steps.anchor.outputs.project_name }}.tgz" "${{ steps.anchor.outputs.project_name }}"
 
-      - name: Stop Local Spec Server
-        if: always()
-        run: |
-          if [ -f /tmp/anchor-spec-server.pid ]; then
-            kill "$(cat /tmp/anchor-spec-server.pid)" 2>/dev/null || true
-          fi
-
       - uses: actions/upload-artifact@v4
         with:
           name: postman-spec-state-${{ steps.anchor.outputs.project_name }}
@@ -592,25 +565,6 @@ jobs:
       matrix: ${{ fromJSON(needs.resolve-specs.outputs.remaining-spec-matrix) }}
     steps:
       - uses: actions/checkout@v4
-
-      - id: sync_spec_server
-        name: Start Local Spec Server
-        run: |
-          port=8123
-          python3 -m http.server "${port}" --bind 127.0.0.1 >/tmp/sync-spec-server.log 2>&1 &
-          echo $! >/tmp/sync-spec-server.pid
-
-          for _ in $(seq 1 20); do
-            if curl -fsS "http://127.0.0.1:${port}/README.md" >/dev/null; then
-              printf 'base_url=http://127.0.0.1:%s\n' "${port}" >> "${GITHUB_OUTPUT}"
-              exit 0
-            fi
-            sleep 1
-          done
-
-          echo "Local spec server did not become ready." >&2
-          cat /tmp/sync-spec-server.log >&2 || true
-          exit 1
 
       - name: Remove Checked-in Postman Resource State For Fresh Runs
         if: env.POSTMAN_WORKSPACE_STRATEGY == 'fresh-run'
@@ -669,7 +623,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_FALLBACK_TOKEN: ${{ secrets.GH_FALLBACK_TOKEN }}
-          LOCAL_SPEC_BASE_URL: ${{ steps.sync_spec_server.outputs.base_url }}
           SHIVEMIND_GITHUB_TOKEN: ${{ secrets.SHIVEMIND_GITHUB_TOKEN }}
         run: >
           node scripts/postman/build-spec-url.mjs
@@ -1036,13 +989,6 @@ jobs:
         run: |
           mkdir -p .postman/export-bundles
           tar -C postman -czf ".postman/export-bundles/${{ matrix.projectName }}.tgz" "${{ matrix.projectName }}"
-
-      - name: Stop Local Spec Server
-        if: always()
-        run: |
-          if [ -f /tmp/sync-spec-server.pid ]; then
-            kill "$(cat /tmp/sync-spec-server.pid)" 2>/dev/null || true
-          fi
 
       - uses: actions/upload-artifact@v4
         with:
