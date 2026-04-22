@@ -448,14 +448,16 @@ jobs:
         if: steps.anchor_run_inputs.outputs.runtime_source == 'mock'
         run: >
           node scripts/postman/build-collection-run-items.mjs
-          --collection-path "postman/${{ steps.anchor.outputs.project_name }}/collections/[Smoke] ${{ steps.anchor.outputs.project_name }}/collection.yaml"
+          --collection-id "${{ steps.anchor_state.outputs.smoke_collection_id }}"
+          --postman-api-key "${{ secrets.POSTMAN_API_KEY }}"
 
       - id: anchor_contract_items
         name: Resolve Anchor Contract Collection Items
         if: steps.anchor_run_inputs.outputs.runtime_source == 'mock'
         run: >
           node scripts/postman/build-collection-run-items.mjs
-          --collection-path "postman/${{ steps.anchor.outputs.project_name }}/collections/[Contract] ${{ steps.anchor.outputs.project_name }}/collection.yaml"
+          --collection-id "${{ steps.anchor_state.outputs.contract_collection_id }}"
+          --postman-api-key "${{ secrets.POSTMAN_API_KEY }}"
 
       - name: Run Anchor Smoke Collection
         if: steps.anchor_run_inputs.outputs.can_run == 'true' && steps.anchor_state.outputs.smoke_collection_id != ''
@@ -464,8 +466,8 @@ jobs:
           command: >-
             collection run ${{ steps.anchor_state.outputs.smoke_collection_id }}
             ${{ steps.anchor_run_inputs.outputs.runtime_source == 'configured' && format('--environment {0}', steps.anchor_run_inputs.outputs.environment_uid) || '' }}
-            ${{ steps.anchor_run_inputs.outputs.runtime_source == 'mock' && format('--env-var "baseUrl={0}"', steps.anchor_run_inputs.outputs.runtime_url) || '' }}
-            ${{ steps.anchor_run_inputs.outputs.ci_override == 'true' && '--env-var "CI=true"' || '' }}
+            ${{ steps.anchor_run_inputs.outputs.runtime_source == 'mock' && format('--env-var baseUrl={0}', steps.anchor_run_inputs.outputs.runtime_url) || '' }}
+            ${{ steps.anchor_run_inputs.outputs.ci_override == 'true' && '--env-var CI=true' || '' }}
             ${{ steps.anchor_run_inputs.outputs.runtime_source == 'mock' && steps.anchor_smoke_items.outputs.include_args || '' }}
           api-key: ${{ secrets.POSTMAN_API_KEY }}
 
@@ -476,8 +478,8 @@ jobs:
           command: >-
             collection run ${{ steps.anchor_state.outputs.contract_collection_id }}
             ${{ steps.anchor_run_inputs.outputs.runtime_source == 'configured' && format('--environment {0}', steps.anchor_run_inputs.outputs.environment_uid) || '' }}
-            ${{ steps.anchor_run_inputs.outputs.runtime_source == 'mock' && format('--env-var "baseUrl={0}"', steps.anchor_run_inputs.outputs.runtime_url) || '' }}
-            ${{ steps.anchor_run_inputs.outputs.ci_override == 'true' && '--env-var "CI=true"' || '' }}
+            ${{ steps.anchor_run_inputs.outputs.runtime_source == 'mock' && format('--env-var baseUrl={0}', steps.anchor_run_inputs.outputs.runtime_url) || '' }}
+            ${{ steps.anchor_run_inputs.outputs.ci_override == 'true' && '--env-var CI=true' || '' }}
             ${{ steps.anchor_run_inputs.outputs.runtime_source == 'mock' && steps.anchor_contract_items.outputs.include_args || '' }}
           api-key: ${{ secrets.POSTMAN_API_KEY }}
 
@@ -883,14 +885,16 @@ jobs:
         if: steps.run_inputs.outputs.runtime_source == 'mock'
         run: >
           node scripts/postman/build-collection-run-items.mjs
-          --collection-path "postman/${{ matrix.projectName }}/collections/[Smoke] ${{ matrix.projectName }}/collection.yaml"
+          --collection-id "${{ steps.sync_state.outputs.smoke_collection_id }}"
+          --postman-api-key "${{ secrets.POSTMAN_API_KEY }}"
 
       - id: contract_items
         name: Resolve Contract Collection Items
         if: steps.run_inputs.outputs.runtime_source == 'mock'
         run: >
           node scripts/postman/build-collection-run-items.mjs
-          --collection-path "postman/${{ matrix.projectName }}/collections/[Contract] ${{ matrix.projectName }}/collection.yaml"
+          --collection-id "${{ steps.sync_state.outputs.contract_collection_id }}"
+          --postman-api-key "${{ secrets.POSTMAN_API_KEY }}"
 
       - name: Run Smoke Collection
         if: steps.run_inputs.outputs.can_run == 'true' && steps.sync_state.outputs.smoke_collection_id != ''
@@ -899,8 +903,8 @@ jobs:
           command: >-
             collection run ${{ steps.sync_state.outputs.smoke_collection_id }}
             ${{ steps.run_inputs.outputs.runtime_source == 'configured' && format('--environment {0}', steps.run_inputs.outputs.environment_uid) || '' }}
-            ${{ steps.run_inputs.outputs.runtime_source == 'mock' && format('--env-var "baseUrl={0}"', steps.run_inputs.outputs.runtime_url) || '' }}
-            ${{ steps.run_inputs.outputs.ci_override == 'true' && '--env-var "CI=true"' || '' }}
+            ${{ steps.run_inputs.outputs.runtime_source == 'mock' && format('--env-var baseUrl={0}', steps.run_inputs.outputs.runtime_url) || '' }}
+            ${{ steps.run_inputs.outputs.ci_override == 'true' && '--env-var CI=true' || '' }}
             ${{ steps.run_inputs.outputs.runtime_source == 'mock' && steps.smoke_items.outputs.include_args || '' }}
           api-key: ${{ secrets.POSTMAN_API_KEY }}
 
@@ -911,8 +915,8 @@ jobs:
           command: >-
             collection run ${{ steps.sync_state.outputs.contract_collection_id }}
             ${{ steps.run_inputs.outputs.runtime_source == 'configured' && format('--environment {0}', steps.run_inputs.outputs.environment_uid) || '' }}
-            ${{ steps.run_inputs.outputs.runtime_source == 'mock' && format('--env-var "baseUrl={0}"', steps.run_inputs.outputs.runtime_url) || '' }}
-            ${{ steps.run_inputs.outputs.ci_override == 'true' && '--env-var "CI=true"' || '' }}
+            ${{ steps.run_inputs.outputs.runtime_source == 'mock' && format('--env-var baseUrl={0}', steps.run_inputs.outputs.runtime_url) || '' }}
+            ${{ steps.run_inputs.outputs.ci_override == 'true' && '--env-var CI=true' || '' }}
             ${{ steps.run_inputs.outputs.runtime_source == 'mock' && steps.contract_items.outputs.include_args || '' }}
           api-key: ${{ secrets.POSTMAN_API_KEY }}
 
