@@ -74,7 +74,7 @@ The workflow uses these building blocks:
 4. `postman-cs/postman-repo-sync-action`
    Creates or updates environments, mocks, and monitors, links the Postman workspace back to Git, and exports multi-file Postman artifacts into the repo.
 5. `postman-cs/postman-insights-onboarding-action`
-   Optionally links discovered Postman Insights services to the target workspace and repository.
+   Optionally links discovered Postman Insights services to the target workspace and repository, using the selected Postman environment plus the matching `system-environment-id`.
 
 ### Pipeline Architecture
 
@@ -210,6 +210,7 @@ Governance is applied at a higher level through the bootstrap and sync inputs:
 
 - `domain` and `governance-mapping-json` assign the workspace to the correct governance grouping
 - `system-env-map-json` and environment sync associate Postman environments to system environments
+- the same `system-env-map-json` also resolves the `system-environment-id` passed into Insights onboarding for the selected environment slug
 - the generated collections, mocks, monitors, and exported resources stay aligned to that governed structure
 
 The CLI enforces the rules; the pinned `postman-cs` actions handle workspace placement, asset generation, environment association, and native Git linking.
@@ -268,6 +269,8 @@ The CLI enforces the rules; the pinned `postman-cs` actions handle workspace pla
 8. Configure Insights only when the services are actually discoverable:
    - `POSTMAN_ENABLE_INSIGHTS=true`
    - `POSTMAN_INSIGHTS_CLUSTER_NAME=<cluster-name>`
+   - keep `POSTMAN_SYSTEM_ENV_MAP_JSON` current so the workflow can pass the correct `system-environment-id` into Insights onboarding
+   - manual system-environment linking alone is not enough for Insights discovery; the target service still needs live deploy traffic and a discoverable Insights agent path
 9. Push to `main` for a full monorepo sync, or use `workflow_dispatch` with `spec_path` for a single-spec sync.
 
 ### Required Secrets
@@ -298,6 +301,7 @@ The CLI enforces the rules; the pinned `postman-cs` actions handle workspace pla
   If omitted, CI smoke and contract runs fall back to the generated mock URL for the selected spec.
 - `POSTMAN_SYSTEM_ENV_MAP_JSON`
   Example: `{"prod":"<system-env-uuid>","stage":"<system-env-uuid>"}`
+  Used both for repo-sync environment association and for resolving the `system-environment-id` sent to Insights onboarding.
 - `POSTMAN_GOVERNANCE_MAPPING_JSON`
   Example: `{"platform":"NFL Platform Governance","football":"NFL Football Governance"}`
 - `POSTMAN_MONITOR_CRON`

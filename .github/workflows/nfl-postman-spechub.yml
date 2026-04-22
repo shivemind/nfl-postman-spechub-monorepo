@@ -476,6 +476,7 @@ jobs:
           node scripts/postman/resolve-collection-run-inputs.mjs
           --environment-uids-json '${{ steps.anchor_state.outputs.environment_uids_json }}'
           --env-runtime-urls-json '${{ env.POSTMAN_ENV_RUNTIME_URLS_JSON }}'
+          --system-env-map-json '${{ env.POSTMAN_SYSTEM_ENV_MAP_JSON }}'
           --mock-url '${{ steps.anchor_state.outputs.mock_url }}'
 
       - id: anchor_mock_smoke_collection
@@ -531,6 +532,7 @@ jobs:
           INPUT_PROJECT_NAME: ${{ steps.anchor.outputs.project_name }}
           INPUT_WORKSPACE_ID: ${{ steps.anchor_state.outputs.workspace_id }}
           INPUT_ENVIRONMENT_ID: ${{ steps.anchor_run_inputs.outputs.environment_uid }}
+          INPUT_SYSTEM_ENVIRONMENT_ID: ${{ steps.anchor_run_inputs.outputs.system_environment_id }}
           INPUT_CLUSTER_NAME: ${{ env.POSTMAN_INSIGHTS_CLUSTER_NAME }}
           INPUT_POSTMAN_ACCESS_TOKEN: ${{ secrets.POSTMAN_ACCESS_TOKEN }}
           INPUT_POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
@@ -542,6 +544,7 @@ jobs:
           project-name: ${{ steps.anchor.outputs.project_name }}
           workspace-id: ${{ steps.anchor_state.outputs.workspace_id }}
           environment-id: ${{ steps.anchor_run_inputs.outputs.environment_uid }}
+          system-environment-id: ${{ steps.anchor_run_inputs.outputs.system_environment_id }}
           cluster-name: ${{ env.POSTMAN_INSIGHTS_CLUSTER_NAME }}
           postman-access-token: ${{ secrets.POSTMAN_ACCESS_TOKEN }}
           postman-api-key: ${{ secrets.POSTMAN_API_KEY }}
@@ -959,6 +962,7 @@ jobs:
           node scripts/postman/resolve-collection-run-inputs.mjs
           --environment-uids-json '${{ steps.sync_state.outputs.environment_uids_json }}'
           --env-runtime-urls-json '${{ env.POSTMAN_ENV_RUNTIME_URLS_JSON }}'
+          --system-env-map-json '${{ env.POSTMAN_SYSTEM_ENV_MAP_JSON }}'
           --mock-url '${{ steps.sync_state.outputs.mock_url }}'
 
       - id: mock_smoke_collection
@@ -1014,6 +1018,7 @@ jobs:
           INPUT_PROJECT_NAME: ${{ matrix.projectName }}
           INPUT_WORKSPACE_ID: ${{ needs.anchor-onboarding.outputs.workspace-id }}
           INPUT_ENVIRONMENT_ID: ${{ steps.run_inputs.outputs.environment_uid }}
+          INPUT_SYSTEM_ENVIRONMENT_ID: ${{ steps.run_inputs.outputs.system_environment_id }}
           INPUT_CLUSTER_NAME: ${{ env.POSTMAN_INSIGHTS_CLUSTER_NAME }}
           INPUT_POSTMAN_ACCESS_TOKEN: ${{ secrets.POSTMAN_ACCESS_TOKEN }}
           INPUT_POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
@@ -1025,6 +1030,7 @@ jobs:
           project-name: ${{ matrix.projectName }}
           workspace-id: ${{ needs.anchor-onboarding.outputs.workspace-id }}
           environment-id: ${{ steps.run_inputs.outputs.environment_uid }}
+          system-environment-id: ${{ steps.run_inputs.outputs.system_environment_id }}
           cluster-name: ${{ env.POSTMAN_INSIGHTS_CLUSTER_NAME }}
           postman-access-token: ${{ secrets.POSTMAN_ACCESS_TOKEN }}
           postman-api-key: ${{ secrets.POSTMAN_API_KEY }}

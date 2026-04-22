@@ -126,9 +126,13 @@ function selectEnvironment(environmentUids, preferredEnvironmentNames, runtimeUr
 }
 
 function resolveConfiguredRuntimeUrl(runtimeUrls, environmentName) {
-  const entries = Object.entries(runtimeUrls)
-    .map(([name, url]) => [String(name || '').trim(), String(url || '').trim()])
-    .filter(([name, url]) => name && url);
+  return resolveEnvironmentMappedValue(runtimeUrls, environmentName);
+}
+
+function resolveEnvironmentMappedValue(values, environmentName) {
+  const entries = Object.entries(values)
+    .map(([name, value]) => [String(name || '').trim(), String(value || '').trim()])
+    .filter(([name, value]) => name && value);
 
   const aliases = environmentAliases(environmentName);
   if (aliases.length === 0) {
@@ -148,6 +152,7 @@ function resolveConfiguredRuntimeUrl(runtimeUrls, environmentName) {
 const args = parseArgs(process.argv.slice(2));
 const environmentUids = parseJsonInput('environment_uids_json', args['environment-uids-json'], {});
 const runtimeUrls = parseJsonInput('env_runtime_urls_json', args['env-runtime-urls-json'], {});
+const systemEnvMap = parseJsonInput('system_env_map_json', args['system-env-map-json'], {});
 const preferredEnvironmentNames = String(args['preferred-environments'] || 'prod,production,stage,staging')
   .split(',')
   .map((value) => value.trim())
@@ -156,6 +161,7 @@ const mockUrl = String(args['mock-url'] || '').trim();
 
 const { environmentName, environmentUid } = selectEnvironment(environmentUids, preferredEnvironmentNames, runtimeUrls);
 const configuredRuntimeUrl = resolveConfiguredRuntimeUrl(runtimeUrls, environmentName);
+const systemEnvironmentId = resolveEnvironmentMappedValue(systemEnvMap, environmentName);
 const runtimeUrl = configuredRuntimeUrl || mockUrl;
 const runtimeSource = configuredRuntimeUrl ? 'configured' : runtimeUrl ? 'mock' : '';
 const ciOverride = runtimeSource === 'mock' ? 'true' : '';
@@ -165,6 +171,7 @@ const skipReason = canRun === 'true' ? '' : environmentUid ? 'runtime-url-unavai
 const result = {
   environment_name: environmentName,
   environment_uid: environmentUid,
+  system_environment_id: systemEnvironmentId,
   runtime_url: runtimeUrl,
   runtime_source: runtimeSource,
   ci_override: ciOverride,
