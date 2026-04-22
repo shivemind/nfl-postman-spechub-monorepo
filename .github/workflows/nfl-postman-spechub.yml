@@ -476,32 +476,33 @@ jobs:
           --env-runtime-urls-json '${{ env.POSTMAN_ENV_RUNTIME_URLS_JSON }}'
           --mock-url '${{ steps.anchor_state.outputs.mock_url }}'
 
-      - id: anchor_smoke_items
-        name: Resolve Anchor Smoke Collection Items
-        if: steps.anchor_run_inputs.outputs.runtime_source == 'mock'
+      - id: anchor_mock_smoke_collection
+        name: Prepare Anchor Smoke Collection For Mock Run
+        if: steps.anchor_run_inputs.outputs.runtime_source == 'mock' && steps.anchor_state.outputs.smoke_collection_id != ''
         run: >
-          node scripts/postman/build-collection-run-items.mjs
+          node scripts/postman/prepare-mock-collection-run.mjs
           --collection-id "${{ steps.anchor_state.outputs.smoke_collection_id }}"
           --postman-api-key "${{ secrets.POSTMAN_API_KEY }}"
+          --output-path ".postman/mock-collections/${{ steps.anchor.outputs.project_name }}/smoke.collection.json"
 
-      - id: anchor_contract_items
-        name: Resolve Anchor Contract Collection Items
-        if: steps.anchor_run_inputs.outputs.runtime_source == 'mock'
+      - id: anchor_mock_contract_collection
+        name: Prepare Anchor Contract Collection For Mock Run
+        if: steps.anchor_run_inputs.outputs.runtime_source == 'mock' && steps.anchor_state.outputs.contract_collection_id != ''
         run: >
-          node scripts/postman/build-collection-run-items.mjs
+          node scripts/postman/prepare-mock-collection-run.mjs
           --collection-id "${{ steps.anchor_state.outputs.contract_collection_id }}"
           --postman-api-key "${{ secrets.POSTMAN_API_KEY }}"
+          --output-path ".postman/mock-collections/${{ steps.anchor.outputs.project_name }}/contract.collection.json"
 
       - name: Run Anchor Smoke Collection
         if: steps.anchor_run_inputs.outputs.can_run == 'true' && steps.anchor_state.outputs.smoke_collection_id != ''
         uses: postmanlabs/postman-cli-action@v1
         with:
           command: >-
-            collection run ${{ steps.anchor_state.outputs.smoke_collection_id }}
+            collection run ${{ steps.anchor_run_inputs.outputs.runtime_source == 'mock' && steps.anchor_mock_smoke_collection.outputs.prepared_collection_path || steps.anchor_state.outputs.smoke_collection_id }}
             ${{ steps.anchor_run_inputs.outputs.runtime_source == 'configured' && format('--environment {0}', steps.anchor_run_inputs.outputs.environment_uid) || '' }}
             ${{ steps.anchor_run_inputs.outputs.runtime_source == 'mock' && format('--env-var baseUrl={0}', steps.anchor_run_inputs.outputs.runtime_url) || '' }}
             ${{ steps.anchor_run_inputs.outputs.ci_override == 'true' && '--env-var CI=true' || '' }}
-            ${{ steps.anchor_run_inputs.outputs.runtime_source == 'mock' && steps.anchor_smoke_items.outputs.include_args || '' }}
           api-key: ${{ secrets.POSTMAN_API_KEY }}
 
       - name: Run Anchor Contract Collection
@@ -509,11 +510,10 @@ jobs:
         uses: postmanlabs/postman-cli-action@v1
         with:
           command: >-
-            collection run ${{ steps.anchor_state.outputs.contract_collection_id }}
+            collection run ${{ steps.anchor_run_inputs.outputs.runtime_source == 'mock' && steps.anchor_mock_contract_collection.outputs.prepared_collection_path || steps.anchor_state.outputs.contract_collection_id }}
             ${{ steps.anchor_run_inputs.outputs.runtime_source == 'configured' && format('--environment {0}', steps.anchor_run_inputs.outputs.environment_uid) || '' }}
             ${{ steps.anchor_run_inputs.outputs.runtime_source == 'mock' && format('--env-var baseUrl={0}', steps.anchor_run_inputs.outputs.runtime_url) || '' }}
             ${{ steps.anchor_run_inputs.outputs.ci_override == 'true' && '--env-var CI=true' || '' }}
-            ${{ steps.anchor_run_inputs.outputs.runtime_source == 'mock' && steps.anchor_contract_items.outputs.include_args || '' }}
           api-key: ${{ secrets.POSTMAN_API_KEY }}
 
       - name: Anchor Insights Onboarding
@@ -956,32 +956,33 @@ jobs:
           --env-runtime-urls-json '${{ env.POSTMAN_ENV_RUNTIME_URLS_JSON }}'
           --mock-url '${{ steps.sync_state.outputs.mock_url }}'
 
-      - id: smoke_items
-        name: Resolve Smoke Collection Items
-        if: steps.run_inputs.outputs.runtime_source == 'mock'
+      - id: mock_smoke_collection
+        name: Prepare Smoke Collection For Mock Run
+        if: steps.run_inputs.outputs.runtime_source == 'mock' && steps.sync_state.outputs.smoke_collection_id != ''
         run: >
-          node scripts/postman/build-collection-run-items.mjs
+          node scripts/postman/prepare-mock-collection-run.mjs
           --collection-id "${{ steps.sync_state.outputs.smoke_collection_id }}"
           --postman-api-key "${{ secrets.POSTMAN_API_KEY }}"
+          --output-path ".postman/mock-collections/${{ matrix.projectName }}/smoke.collection.json"
 
-      - id: contract_items
-        name: Resolve Contract Collection Items
-        if: steps.run_inputs.outputs.runtime_source == 'mock'
+      - id: mock_contract_collection
+        name: Prepare Contract Collection For Mock Run
+        if: steps.run_inputs.outputs.runtime_source == 'mock' && steps.sync_state.outputs.contract_collection_id != ''
         run: >
-          node scripts/postman/build-collection-run-items.mjs
+          node scripts/postman/prepare-mock-collection-run.mjs
           --collection-id "${{ steps.sync_state.outputs.contract_collection_id }}"
           --postman-api-key "${{ secrets.POSTMAN_API_KEY }}"
+          --output-path ".postman/mock-collections/${{ matrix.projectName }}/contract.collection.json"
 
       - name: Run Smoke Collection
         if: steps.run_inputs.outputs.can_run == 'true' && steps.sync_state.outputs.smoke_collection_id != ''
         uses: postmanlabs/postman-cli-action@v1
         with:
           command: >-
-            collection run ${{ steps.sync_state.outputs.smoke_collection_id }}
+            collection run ${{ steps.run_inputs.outputs.runtime_source == 'mock' && steps.mock_smoke_collection.outputs.prepared_collection_path || steps.sync_state.outputs.smoke_collection_id }}
             ${{ steps.run_inputs.outputs.runtime_source == 'configured' && format('--environment {0}', steps.run_inputs.outputs.environment_uid) || '' }}
             ${{ steps.run_inputs.outputs.runtime_source == 'mock' && format('--env-var baseUrl={0}', steps.run_inputs.outputs.runtime_url) || '' }}
             ${{ steps.run_inputs.outputs.ci_override == 'true' && '--env-var CI=true' || '' }}
-            ${{ steps.run_inputs.outputs.runtime_source == 'mock' && steps.smoke_items.outputs.include_args || '' }}
           api-key: ${{ secrets.POSTMAN_API_KEY }}
 
       - name: Run Contract Collection
@@ -989,11 +990,10 @@ jobs:
         uses: postmanlabs/postman-cli-action@v1
         with:
           command: >-
-            collection run ${{ steps.sync_state.outputs.contract_collection_id }}
+            collection run ${{ steps.run_inputs.outputs.runtime_source == 'mock' && steps.mock_contract_collection.outputs.prepared_collection_path || steps.sync_state.outputs.contract_collection_id }}
             ${{ steps.run_inputs.outputs.runtime_source == 'configured' && format('--environment {0}', steps.run_inputs.outputs.environment_uid) || '' }}
             ${{ steps.run_inputs.outputs.runtime_source == 'mock' && format('--env-var baseUrl={0}', steps.run_inputs.outputs.runtime_url) || '' }}
             ${{ steps.run_inputs.outputs.ci_override == 'true' && '--env-var CI=true' || '' }}
-            ${{ steps.run_inputs.outputs.runtime_source == 'mock' && steps.contract_items.outputs.include_args || '' }}
           api-key: ${{ secrets.POSTMAN_API_KEY }}
 
       - name: Insights Onboarding
