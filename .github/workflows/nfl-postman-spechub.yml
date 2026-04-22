@@ -236,6 +236,16 @@ jobs:
           governance-mapping-json: ${{ env.POSTMAN_GOVERNANCE_MAPPING_JSON }}
           postman-api-key: ${{ secrets.POSTMAN_API_KEY }}
 
+      - name: Run Anchor Governance Lint
+        if: ${{ steps.anchor_bootstrap_shared.outputs.workspace-id != '' || steps.anchor_bootstrap_fresh.outputs.workspace-id != '' || steps.anchor_inputs.outputs.workspace_id != '' || steps.existing.outputs.workspace_id != '' || env.POSTMAN_SHARED_WORKSPACE_ID != '' }}
+        uses: postmanlabs/postman-cli-action@v1
+        with:
+          command: >-
+            spec lint ${{ steps.anchor.outputs.spec_path }}
+            --workspace-id ${{ steps.anchor_bootstrap_shared.outputs.workspace-id || steps.anchor_bootstrap_fresh.outputs.workspace-id || steps.anchor_inputs.outputs.workspace_id || steps.existing.outputs.workspace_id || env.POSTMAN_SHARED_WORKSPACE_ID }}
+            --fail-severity error
+          api-key: ${{ secrets.POSTMAN_API_KEY }}
+
       - id: anchor_repo_sync
         name: Materialize Anchor Environments, Mocks, and Monitors
         if: steps.anchor_mode.outputs.reuse_existing != 'true'
@@ -689,6 +699,16 @@ jobs:
           spec-url: ${{ steps.spec_url.outputs.spec_url }}
           governance-mapping-json: ${{ env.POSTMAN_GOVERNANCE_MAPPING_JSON }}
           postman-api-key: ${{ secrets.POSTMAN_API_KEY }}
+
+      - name: Run Governance Lint
+        if: ${{ needs.anchor-onboarding.outputs.workspace-id != '' || steps.existing.outputs.workspace_id != '' || env.POSTMAN_SHARED_WORKSPACE_ID != '' }}
+        uses: postmanlabs/postman-cli-action@v1
+        with:
+          command: >-
+            spec lint ${{ matrix.specPath }}
+            --workspace-id ${{ needs.anchor-onboarding.outputs.workspace-id || steps.existing.outputs.workspace_id || env.POSTMAN_SHARED_WORKSPACE_ID }}
+            --fail-severity error
+          api-key: ${{ secrets.POSTMAN_API_KEY }}
 
       - id: repo_sync
         name: Materialize Environments, Mocks, and Monitors

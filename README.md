@@ -1,8 +1,17 @@
-# NFL Internal API Monorepo Samples
+# NFL Customer Handoff: Postman Monorepo Pipeline
 
-This scaffold contains fictional OpenAPI YAML specifications for the kinds of services an NFL engineering organization might keep in an internal monorepo and connect to Postman.
+This repository is a customer-ready reference implementation for taking an NFL-style internal API monorepo and onboarding it into Postman Spec Hub with governed linting, generated collections, environments, mocks, monitors, and exported Postman assets.
 
-All endpoints, domains, and identifiers are illustrative only. The specs use `example.com` hostnames so they are clearly non-production.
+All APIs, domains, and identifiers are illustrative only. The sample specs use `*.nfl.example.com` hostnames so they are clearly non-production, but the workflow, helper scripts, repo layout, and Postman integration model are intended to be directly reusable by the NFL engineering team.
+
+## Customer Delivery Snapshot
+
+- 13 OpenAPI specs in one monorepo, including one 250-endpoint scale-test spec
+- one GitHub Actions pipeline for shared-mode production syncs and fresh-run preview workspaces
+- explicit Postman CLI governance checks with `postman spec lint`
+- explicit Postman CLI smoke and contract execution with `postman collection run`
+- repo-native Postman export state under `postman/<project>/...`
+- documented customer setup, secrets, variables, and operating model
 
 ## Layout
 
@@ -42,7 +51,7 @@ All endpoints, domains, and identifiers are illustrative only. The specs use `ex
 
 ## NFL Spec Hub Automation
 
-This repo includes [`nfl-postman-spechub.yml`](.github/workflows/nfl-postman-spechub.yml), which wraps the four `postman-cs` open-alpha actions into an NFL-oriented monorepo pipeline for Postman Spec Hub, not API Builder.
+This repo includes [`nfl-postman-spechub.yml`](.github/workflows/nfl-postman-spechub.yml), which implements an NFL-oriented monorepo pipeline for Postman Spec Hub. It uses a small set of helper scripts in [`scripts/postman`](scripts/postman) plus pinned Postman actions to keep the workflow deterministic and customer-reviewable.
 
 Validated shape for this repo:
 
@@ -54,18 +63,37 @@ Validated shape for this repo:
 
 ### Actions Used
 
-The workflow runs these actions in order:
+The workflow uses these building blocks:
 
-1. `postman-cs/postman-api-onboarding-action`
-   Used for the anchor spec. It composes bootstrap plus repo-sync to establish the workspace context for the run.
+1. `scripts/postman/resolve-specs.mjs`
+   Resolves the anchor spec and any remaining matrix entries from `openapi/**`.
 2. `postman-cs/postman-bootstrap-action`
-   Creates or reuses the Postman workspace, uploads the spec into Spec Hub, lints the uploaded spec with the Postman CLI, generates or refreshes baseline, smoke, and contract collections, and applies governance mapping.
-3. `postman-cs/postman-repo-sync-action`
-   Creates or updates environments, mocks, and monitors, links the Postman workspace back to the Git repository through native Git integration, and exports multi-file collection artifacts into the repo.
-4. `postman-cs/postman-insights-onboarding-action`
-   Optionally links discovered Postman Insights services to the target workspace and repository and creates the observability binding.
+   Creates or reuses the Postman workspace, uploads the spec into Spec Hub, and generates or refreshes baseline, smoke, and contract collections.
+3. `postmanlabs/postman-cli-action@v1`
+   Runs `postman spec lint` as the explicit governance gate and `postman collection run` as the explicit smoke and contract test gate.
+4. `postman-cs/postman-repo-sync-action`
+   Creates or updates environments, mocks, and monitors, links the Postman workspace back to Git, and exports multi-file Postman artifacts into the repo.
+5. `postman-cs/postman-insights-onboarding-action`
+   Optionally links discovered Postman Insights services to the target workspace and repository.
 
-The workflow also uses `postmanlabs/postman-cli-action@v1` for explicit `collection run` steps against generated smoke and contract collections when runtime URLs are configured.
+### Pipeline Architecture
+
+```mermaid
+flowchart LR
+    A["GitHub repository<br/>`openapi/**` + `.github/workflows/**` + `scripts/postman/**`"] --> B["GitHub Actions workflow<br/>`nfl-postman-spechub.yml`"]
+    B --> C["`resolve-specs`<br/>discover anchor + matrix"]
+    C --> D["`anchor-onboarding`"]
+    D --> E["`postman-bootstrap-action`<br/>workspace + spec + generated collections"]
+    E --> F["Postman CLI<br/>`postman spec lint`<br/>workspace governance rules"]
+    F --> G["`postman-repo-sync-action`<br/>environments + mocks + monitors + Git link"]
+    G --> H["Postman CLI<br/>`postman collection run`<br/>smoke + contract"]
+    H --> I["optional Insights onboarding"]
+    G --> J["Postman workspace / Spec Hub"]
+    G --> K["repo export<br/>`postman/<project>/...`"]
+    K --> L["`finalize-manifest`"]
+    L --> M["`.postman/spec-hub-manifest.json`"]
+    L --> N["`.postman/resources.yaml` + `.postman/workflows.yaml`"]
+```
 
 ### Workspace Strategy
 
@@ -93,7 +121,7 @@ In `shared` mode, idempotency comes from the committed manifest in [`spec-hub-ma
 
 In `fresh-run` mode, the workflow ignores committed cloud IDs on purpose and provisions a brand new workspace for the run. The generated state stays in workflow artifacts so the canonical shared-mode manifest is not polluted with ephemeral preview workspace IDs.
 
-### CI Pipeline Diagram
+### Detailed CI Pipeline Diagram
 
 ```mermaid
 flowchart TD
@@ -105,30 +133,35 @@ flowchart TD
     E -->|`shared`| F["Reuse prior workspace/spec IDs when hashes match"]
     E -->|`fresh-run`| G["Ignore prior cloud IDs and create a brand new workspace"]
 
-    F --> H["`postman-api-onboarding-action` for anchor spec when needed"]
+    F --> H["`postman-bootstrap-action` for anchor spec when needed"]
     G --> H
-    H --> I["Optional Postman CLI smoke and contract runs<br/>when runtime URLs are configured"]
-    I --> J["Optional `postman-insights-onboarding-action`"]
-    J --> K["Anchor state artifact + export bundle"]
+    H --> I["Postman CLI governance gate<br/>`postman spec lint`"]
+    I --> J["`postman-repo-sync-action`<br/>environments + mock + monitor + repo export"]
+    J --> K["Postman CLI test gate<br/>smoke + contract collections"]
+    K --> L["Optional `postman-insights-onboarding-action`"]
+    L --> M["Anchor state artifact + export bundle"]
 
-    K --> L["`sync-remaining-specs` matrix<br/>serial with `max-parallel: 1`"]
-    L --> M["Per spec:<br/>load state + compute spec hash"]
-    M --> N{"Changed or forced fresh-run?"}
-    N -->|Yes| O["`postman-bootstrap-action` + `postman-repo-sync-action`"]
-    N -->|No| P["Reuse existing Postman IDs"]
-    O --> Q["Optional CLI smoke / contract / Insights"]
-    P --> Q
-    Q --> R["Persist state + package project export"]
-    R --> S["Next spec"]
-    S --> L
+    M --> N["`sync-remaining-specs` matrix<br/>serial with `max-parallel: 1`"]
+    N --> O["Per spec:<br/>load state + compute spec hash"]
+    O --> P{"Changed or forced fresh-run?"}
+    P -->|Yes| Q["`postman-bootstrap-action`"]
+    P -->|No| R["Reuse existing Postman IDs"]
+    Q --> S["Postman CLI governance gate<br/>`postman spec lint`"]
+    R --> S
+    S --> T["`postman-repo-sync-action`"]
+    T --> U["Postman CLI test gate<br/>smoke + contract"]
+    U --> V["Optional Insights"]
+    V --> W["Persist state + package project export"]
+    W --> X["Next spec"]
+    X --> N
 
-    L -->|`shared`| T["`finalize-manifest`"]
-    L -->|`fresh-run`| Z["Keep state + export bundles as workflow artifacts"]
-    T --> U["Merge state artifacts into `.postman/spec-hub-manifest.json`"]
-    U --> V["Render `.postman/resources.yaml`, `.postman/workflows.yaml`, and `postman/<project>/...`"]
-    V --> W{"Stable repo-side state changed?"}
-    W -->|Yes| X["Commit refreshed Postman export state"]
-    W -->|No| Y["Exit cleanly with no commit"]
+    N -->|`shared`| Y["`finalize-manifest`"]
+    N -->|`fresh-run`| AE["Keep state + export bundles as workflow artifacts"]
+    Y --> Z["Merge state artifacts into `.postman/spec-hub-manifest.json`"]
+    Z --> AA["Render `.postman/resources.yaml`, `.postman/workflows.yaml`, and `postman/<project>/...`"]
+    AA --> AB{"Stable repo-side state changed?"}
+    AB -->|Yes| AC["Commit refreshed Postman export state"]
+    AB -->|No| AD["Exit cleanly with no commit"]
 ```
 
 ### What Happens In The Pipeline
@@ -160,14 +193,16 @@ The pipeline leans on Postman's native Git integration through the `postman-cs` 
 
 ### Postman CLI, Lint, Smoke, Contract, And Governance
 
-The pipeline uses the Postman CLI in two ways:
+The pipeline uses the Postman CLI as the explicit CI gate for both governance and testing:
 
-- `postman-bootstrap-action` lints the uploaded spec by Postman spec UID and exposes a `lint-summary-json` output.
-- The top-level workflow runs generated smoke and contract collections with `postmanlabs/postman-cli-action@v1`, preferring `POSTMAN_ENV_RUNTIME_URLS_JSON` and falling back to the generated mock URL when no runtime URL is configured.
+- `postman spec lint <spec> --workspace-id <workspace-id>` runs in both the anchor job and the per-spec matrix job to enforce the governance rules configured for the target Postman workspace.
+- `postman collection run <collection-id>` runs the generated smoke and contract collections in CI.
+- When `POSTMAN_ENV_RUNTIME_URLS_JSON` is configured, the smoke and contract runs target the live runtime URL for that environment.
+- When `POSTMAN_ENV_RUNTIME_URLS_JSON` is blank, the workflow falls back to the generated Postman mock URL so the runs remain deterministic and idempotent for previews and customer demos.
 
 What that means in practice:
 
-- spec quality checks happen during bootstrap
+- governance and spec quality checks happen through the CLI lint gate
 - smoke and contract checks happen in CI against generated collections
 - failures are surfaced directly in GitHub Actions
 
@@ -177,7 +212,7 @@ Governance is applied at a higher level through the bootstrap and sync inputs:
 - `system-env-map-json` and environment sync associate Postman environments to system environments
 - the generated collections, mocks, monitors, and exported resources stay aligned to that governed structure
 
-The CLI does not create governance groups by itself. Instead, the actions use Postman APIs and internal Bifrost flows to place assets correctly, while the CLI makes quality and contract drift visible in CI.
+The CLI enforces the rules; the pinned `postman-cs` actions handle workspace placement, asset generation, environment association, and native Git linking.
 
 ### Why This Helps The NFL
 
@@ -188,6 +223,15 @@ The CLI does not create governance groups by itself. Instead, the actions use Po
 - Native Git linking makes it easier to understand which repository produced which workspace content.
 - Large-service onboarding is easier to prove. This repo includes a 250-endpoint scale-test spec and the fan-out workflow handles it alongside the other specs.
 - The exported Postman monorepo structure gives the NFL a repo-native artifact trail for review, pull requests, and auditability.
+
+### Customer Handoff Checklist
+
+1. Create a private GitHub repository for the NFL-deliverable copy of this repo.
+2. Add the required Postman and GitHub secrets listed below.
+3. Configure the repository variables for workspace strategy, governance mapping, environments, runtime URLs, and monitoring.
+4. Run one `fresh-run` dispatch to validate workspace creation, governance linting, smoke tests, and contract tests in isolation.
+5. Switch to `shared` mode for the long-lived NFL production workspace.
+6. Review the generated `postman/<project>/...` export tree and the rendered `.postman` files as the repo-side system of record.
 
 ### Customer Setup
 
