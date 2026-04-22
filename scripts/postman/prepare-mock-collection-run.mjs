@@ -167,6 +167,66 @@ function applyMockResponseHeaders(items, trail = []) {
   return patchedRequests;
 }
 
+function stripResponseTimeAssertionLines(execLines) {
+  const lines = Array.isArray(execLines) ? execLines : [];
+  const nextLines = [];
+  let removedAssertionCount = 0;
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = String(lines[index] || '');
+    if (!line.includes('pm.test(\'Response time is acceptable\'')) {
+      nextLines.push(line);
+      continue;
+    }
+
+    removedAssertionCount += 1;
+
+    while (index + 1 < lines.length) {
+      index += 1;
+      if (String(lines[index] || '').trim() === '});') {
+        break;
+      }
+    }
+
+    while (index + 1 < lines.length && String(lines[index + 1] || '').trim() === '') {
+      index += 1;
+    }
+  }
+
+  return {
+    lines: nextLines,
+    removedAssertionCount
+  };
+}
+
+function stripResponseTimeAssertions(items) {
+  const normalizedItems = Array.isArray(items) ? items : [];
+  let removedAssertionCount = 0;
+
+  for (const item of normalizedItems) {
+    if (item && typeof item === 'object' && Array.isArray(item.event)) {
+      for (const event of item.event) {
+        if (String(event?.listen || '').trim() !== 'test') {
+          continue;
+        }
+
+        const nextScript = stripResponseTimeAssertionLines(event?.script?.exec);
+        event.script = {
+          ...(event?.script && typeof event.script === 'object' ? event.script : {}),
+          exec: nextScript.lines
+        };
+        removedAssertionCount += nextScript.removedAssertionCount;
+      }
+    }
+
+    if (item && typeof item === 'object' && Array.isArray(item.item)) {
+      removedAssertionCount += stripResponseTimeAssertions(item.item);
+    }
+  }
+
+  return removedAssertionCount;
+}
+
 const args = parseArgs(process.argv.slice(2));
 const postmanApiKey = String(args['postman-api-key'] || process.env.POSTMAN_API_KEY || '').trim();
 const outputPath = assertOutputPathWithinCwd(args['output-path']);
@@ -178,6 +238,7 @@ const sanitizedCollection = JSON.parse(JSON.stringify(collection));
 const filteredItems = removeExcludedItems(sanitizedCollection.item, excludeRegex);
 sanitizedCollection.item = filteredItems.items;
 const patchedRequests = applyMockResponseHeaders(sanitizedCollection.item);
+const strippedResponseTimeAssertionCount = stripResponseTimeAssertions(sanitizedCollection.item);
 
 fs.mkdirSync(path.dirname(outputPath), { recursive: true });
 fs.writeFileSync(outputPath, `${JSON.stringify(sanitizedCollection, null, 2)}\n`, 'utf8');
@@ -186,6 +247,7 @@ const result = {
   prepared_collection_path: normalizePosixPath(path.relative(process.cwd(), outputPath)),
   patched_request_count: String(patchedRequests.length),
   removed_item_count: String(filteredItems.removedItemCount),
+  stripped_response_time_assertion_count: String(strippedResponseTimeAssertionCount),
   patched_requests_json: JSON.stringify(patchedRequests)
 };
 
