@@ -44,6 +44,7 @@ env:
   POSTMAN_SYSTEM_ENV_MAP_JSON: ${{ vars.POSTMAN_SYSTEM_ENV_MAP_JSON != '' && vars.POSTMAN_SYSTEM_ENV_MAP_JSON || '{}' }}
   POSTMAN_GOVERNANCE_MAPPING_JSON: ${{ vars.POSTMAN_GOVERNANCE_MAPPING_JSON != '' && vars.POSTMAN_GOVERNANCE_MAPPING_JSON || '{}' }}
   POSTMAN_MONITOR_CRON: ${{ vars.POSTMAN_MONITOR_CRON }}
+  POSTMAN_MOCK_DELAY_REQUEST_MS: ${{ vars.POSTMAN_MOCK_DELAY_REQUEST_MS != '' && vars.POSTMAN_MOCK_DELAY_REQUEST_MS || '250' }}
   POSTMAN_WORKSPACE_ADMIN_USER_IDS: ${{ vars.POSTMAN_WORKSPACE_ADMIN_USER_IDS }}
   POSTMAN_REQUESTER_EMAIL: ${{ vars.POSTMAN_REQUESTER_EMAIL }}
   POSTMAN_DOMAIN: ${{ vars.POSTMAN_DOMAIN }}
@@ -503,6 +504,7 @@ jobs:
             ${{ steps.anchor_run_inputs.outputs.runtime_source == 'configured' && format('--environment {0}', steps.anchor_run_inputs.outputs.environment_uid) || '' }}
             ${{ steps.anchor_run_inputs.outputs.runtime_source == 'mock' && format('--env-var baseUrl={0}', steps.anchor_run_inputs.outputs.runtime_url) || '' }}
             ${{ steps.anchor_run_inputs.outputs.ci_override == 'true' && '--env-var CI=true' || '' }}
+            ${{ steps.anchor_run_inputs.outputs.runtime_source == 'mock' && format('--delay-request {0}', env.POSTMAN_MOCK_DELAY_REQUEST_MS) || '' }}
           api-key: ${{ secrets.POSTMAN_API_KEY }}
 
       - name: Run Anchor Contract Collection
@@ -514,6 +516,7 @@ jobs:
             ${{ steps.anchor_run_inputs.outputs.runtime_source == 'configured' && format('--environment {0}', steps.anchor_run_inputs.outputs.environment_uid) || '' }}
             ${{ steps.anchor_run_inputs.outputs.runtime_source == 'mock' && format('--env-var baseUrl={0}', steps.anchor_run_inputs.outputs.runtime_url) || '' }}
             ${{ steps.anchor_run_inputs.outputs.ci_override == 'true' && '--env-var CI=true' || '' }}
+            ${{ steps.anchor_run_inputs.outputs.runtime_source == 'mock' && format('--delay-request {0}', env.POSTMAN_MOCK_DELAY_REQUEST_MS) || '' }}
           api-key: ${{ secrets.POSTMAN_API_KEY }}
 
       - name: Anchor Insights Onboarding
@@ -983,6 +986,7 @@ jobs:
             ${{ steps.run_inputs.outputs.runtime_source == 'configured' && format('--environment {0}', steps.run_inputs.outputs.environment_uid) || '' }}
             ${{ steps.run_inputs.outputs.runtime_source == 'mock' && format('--env-var baseUrl={0}', steps.run_inputs.outputs.runtime_url) || '' }}
             ${{ steps.run_inputs.outputs.ci_override == 'true' && '--env-var CI=true' || '' }}
+            ${{ steps.run_inputs.outputs.runtime_source == 'mock' && format('--delay-request {0}', env.POSTMAN_MOCK_DELAY_REQUEST_MS) || '' }}
           api-key: ${{ secrets.POSTMAN_API_KEY }}
 
       - name: Run Contract Collection
@@ -994,6 +998,7 @@ jobs:
             ${{ steps.run_inputs.outputs.runtime_source == 'configured' && format('--environment {0}', steps.run_inputs.outputs.environment_uid) || '' }}
             ${{ steps.run_inputs.outputs.runtime_source == 'mock' && format('--env-var baseUrl={0}', steps.run_inputs.outputs.runtime_url) || '' }}
             ${{ steps.run_inputs.outputs.ci_override == 'true' && '--env-var CI=true' || '' }}
+            ${{ steps.run_inputs.outputs.runtime_source == 'mock' && format('--delay-request {0}', env.POSTMAN_MOCK_DELAY_REQUEST_MS) || '' }}
           api-key: ${{ secrets.POSTMAN_API_KEY }}
 
       - name: Insights Onboarding
