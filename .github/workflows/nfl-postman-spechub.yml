@@ -83,6 +83,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - id: anchor_spec_server
+        name: Start Local HTTPS Spec Server
+        run: |
+          tmp_dir="$(mktemp -d)"
+          openssl req -x509 -newkey rsa:2048 -keyout "${tmp_dir}/key.pem" -out "${tmp_dir}/cert.pem" -days 1 -nodes -subj '/CN=127.0.0.1' >/dev/null 2>&1
+          node scripts/postman/serve-local-specs.mjs --host 127.0.0.1 --port 8123 --root . --key "${tmp_dir}/key.pem" --cert "${tmp_dir}/cert.pem" >/tmp/anchor-spec-server.log 2>&1 &
+          echo $! >/tmp/anchor-spec-server.pid
+          echo "${tmp_dir}" >/tmp/anchor-spec-server.dir
+
+          for _ in $(seq 1 20); do
+            if curl -kfsS "https://127.0.0.1:8123/README.md" >/dev/null; then
+              printf 'base_url=https://127.0.0.1:8123\n' >> "${GITHUB_OUTPUT}"
+              exit 0
+            fi
+            sleep 1
+          done
+
+          echo "Local HTTPS spec server did not become ready." >&2
+          cat /tmp/anchor-spec-server.log >&2 || true
+          exit 1
+
       - name: Remove Checked-in Postman Resource State For Fresh Runs
         if: env.POSTMAN_WORKSPACE_STRATEGY == 'fresh-run'
         run: rm -f .postman/resources.yaml
@@ -152,9 +173,7 @@ jobs:
       - id: spec_url
         name: Build Anchor Spec URL
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_FALLBACK_TOKEN: ${{ secrets.GH_FALLBACK_TOKEN }}
-          SHIVEMIND_GITHUB_TOKEN: ${{ secrets.SHIVEMIND_GITHUB_TOKEN }}
+          LOCAL_SPEC_BASE_URL: ${{ steps.anchor_spec_server.outputs.base_url }}
         run: >
           node scripts/postman/build-spec-url.mjs
           --spec-path "${{ steps.anchor.outputs.spec_path }}"
@@ -198,6 +217,8 @@ jobs:
       - id: anchor_bootstrap_shared
         name: Bootstrap Anchor Spec Hub Assets
         if: steps.anchor_mode.outputs.reuse_existing != 'true' && env.POSTMAN_WORKSPACE_STRATEGY != 'fresh-run'
+        env:
+          NODE_TLS_REJECT_UNAUTHORIZED: '0'
         uses: postman-cs/postman-bootstrap-action@e52530a0e57a5ce12b9a1d97a49621b6573782df
         with:
           workspace-id: ${{ steps.anchor_inputs.outputs.workspace_id }}
@@ -219,6 +240,8 @@ jobs:
       - id: anchor_bootstrap_fresh
         name: Bootstrap Anchor Spec Hub Assets
         if: steps.anchor_mode.outputs.reuse_existing != 'true' && env.POSTMAN_WORKSPACE_STRATEGY == 'fresh-run'
+        env:
+          NODE_TLS_REJECT_UNAUTHORIZED: '0'
         uses: postman-cs/postman-bootstrap-action@e52530a0e57a5ce12b9a1d97a49621b6573782df
         with:
           workspace-id: ${{ steps.anchor_inputs.outputs.workspace_id }}
@@ -543,6 +566,16 @@ jobs:
           mkdir -p .postman/export-bundles
           tar -C postman -czf ".postman/export-bundles/${{ steps.anchor.outputs.project_name }}.tgz" "${{ steps.anchor.outputs.project_name }}"
 
+      - name: Stop Local HTTPS Spec Server
+        if: always()
+        run: |
+          if [ -f /tmp/anchor-spec-server.pid ]; then
+            kill "$(cat /tmp/anchor-spec-server.pid)" 2>/dev/null || true
+          fi
+          if [ -f /tmp/anchor-spec-server.dir ]; then
+            rm -rf "$(cat /tmp/anchor-spec-server.dir)"
+          fi
+
       - uses: actions/upload-artifact@v4
         with:
           name: postman-spec-state-${{ steps.anchor.outputs.project_name }}
@@ -565,6 +598,27 @@ jobs:
       matrix: ${{ fromJSON(needs.resolve-specs.outputs.remaining-spec-matrix) }}
     steps:
       - uses: actions/checkout@v4
+
+      - id: sync_spec_server
+        name: Start Local HTTPS Spec Server
+        run: |
+          tmp_dir="$(mktemp -d)"
+          openssl req -x509 -newkey rsa:2048 -keyout "${tmp_dir}/key.pem" -out "${tmp_dir}/cert.pem" -days 1 -nodes -subj '/CN=127.0.0.1' >/dev/null 2>&1
+          node scripts/postman/serve-local-specs.mjs --host 127.0.0.1 --port 8123 --root . --key "${tmp_dir}/key.pem" --cert "${tmp_dir}/cert.pem" >/tmp/sync-spec-server.log 2>&1 &
+          echo $! >/tmp/sync-spec-server.pid
+          echo "${tmp_dir}" >/tmp/sync-spec-server.dir
+
+          for _ in $(seq 1 20); do
+            if curl -kfsS "https://127.0.0.1:8123/README.md" >/dev/null; then
+              printf 'base_url=https://127.0.0.1:8123\n' >> "${GITHUB_OUTPUT}"
+              exit 0
+            fi
+            sleep 1
+          done
+
+          echo "Local HTTPS spec server did not become ready." >&2
+          cat /tmp/sync-spec-server.log >&2 || true
+          exit 1
 
       - name: Remove Checked-in Postman Resource State For Fresh Runs
         if: env.POSTMAN_WORKSPACE_STRATEGY == 'fresh-run'
@@ -621,9 +675,7 @@ jobs:
       - id: spec_url
         name: Build Spec URL
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_FALLBACK_TOKEN: ${{ secrets.GH_FALLBACK_TOKEN }}
-          SHIVEMIND_GITHUB_TOKEN: ${{ secrets.SHIVEMIND_GITHUB_TOKEN }}
+          LOCAL_SPEC_BASE_URL: ${{ steps.sync_spec_server.outputs.base_url }}
         run: >
           node scripts/postman/build-spec-url.mjs
           --spec-path "${{ matrix.specPath }}"
@@ -662,6 +714,8 @@ jobs:
       - id: bootstrap_shared
         name: Bootstrap Shared Spec Hub Assets
         if: steps.sync_mode.outputs.reuse_existing != 'true' && env.POSTMAN_WORKSPACE_STRATEGY != 'fresh-run'
+        env:
+          NODE_TLS_REJECT_UNAUTHORIZED: '0'
         uses: postman-cs/postman-bootstrap-action@e52530a0e57a5ce12b9a1d97a49621b6573782df
         with:
           workspace-id: ${{ needs.anchor-onboarding.outputs.workspace-id }}
@@ -683,6 +737,8 @@ jobs:
       - id: bootstrap_fresh
         name: Bootstrap Shared Spec Hub Assets
         if: steps.sync_mode.outputs.reuse_existing != 'true' && env.POSTMAN_WORKSPACE_STRATEGY == 'fresh-run'
+        env:
+          NODE_TLS_REJECT_UNAUTHORIZED: '0'
         uses: postman-cs/postman-bootstrap-action@e52530a0e57a5ce12b9a1d97a49621b6573782df
         with:
           workspace-id: ${{ needs.anchor-onboarding.outputs.workspace-id }}
@@ -989,6 +1045,16 @@ jobs:
         run: |
           mkdir -p .postman/export-bundles
           tar -C postman -czf ".postman/export-bundles/${{ matrix.projectName }}.tgz" "${{ matrix.projectName }}"
+
+      - name: Stop Local HTTPS Spec Server
+        if: always()
+        run: |
+          if [ -f /tmp/sync-spec-server.pid ]; then
+            kill "$(cat /tmp/sync-spec-server.pid)" 2>/dev/null || true
+          fi
+          if [ -f /tmp/sync-spec-server.dir ]; then
+            rm -rf "$(cat /tmp/sync-spec-server.dir)"
+          fi
 
       - uses: actions/upload-artifact@v4
         with:

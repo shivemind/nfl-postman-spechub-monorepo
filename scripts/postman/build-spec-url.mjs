@@ -30,13 +30,9 @@ const args = parseArgs(process.argv.slice(2));
 const repository = String(args.repository || process.env.GITHUB_REPOSITORY || '').trim();
 const sha = String(args.sha || process.env.GITHUB_SHA || '').trim();
 const specPath = normalizePosixPath(args['spec-path'] || '');
-const githubToken = String(
-  args['github-token'] ||
-  process.env.GITHUB_TOKEN ||
-  process.env.GH_FALLBACK_TOKEN ||
-  process.env.SHIVEMIND_GITHUB_TOKEN ||
-  ''
-).trim();
+const localSpecBaseUrl = String(args['local-spec-base-url'] || process.env.LOCAL_SPEC_BASE_URL || '')
+  .trim()
+  .replace(/\/+$/, '');
 
 if (!repository) {
   throw new Error('Missing GitHub repository context');
@@ -55,8 +51,9 @@ const encodedPath = specPath
   .map((segment) => encodeURIComponent(segment))
   .join('/');
 
-const credentialPrefix = githubToken ? `x-access-token:${encodeURIComponent(githubToken)}@` : '';
-const specUrl = `https://${credentialPrefix}raw.githubusercontent.com/${repository}/${sha}/${encodedPath}`;
+const specUrl = localSpecBaseUrl
+  ? `${localSpecBaseUrl}/${encodedPath}`
+  : `https://raw.githubusercontent.com/${repository}/${sha}/${encodedPath}`;
 
 if (process.env.GITHUB_OUTPUT) {
   appendGithubOutput('spec_url', specUrl);
