@@ -1,0 +1,91 @@
+name: NFL Postman PR Lint
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'openapi/**/*.yaml'
+      - 'openapi/**/*.yml'
+      - 'openapi/**/*.json'
+      - '.postman/**'
+      - '.github/workflows/nfl-postman-spechub.yml'
+      - '.github/workflows/nfl-postman-pr-lint.yml'
+      - 'postman/**'
+      - 'scripts/postman/**'
+      - 'README.md'
+
+concurrency:
+  group: nfl-postman-pr-lint-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  POSTMAN_SHARED_WORKSPACE_ID: ${{ vars.POSTMAN_SHARED_WORKSPACE_ID }}
+
+jobs:
+  resolve-specs:
+    runs-on: ubuntu-latest
+    outputs:
+      has-specs: ${{ steps.resolve.outputs.has_specs }}
+      spec-matrix: ${{ steps.resolve.outputs.spec_matrix }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: resolve
+        name: Resolve Spec Matrix
+        run: node scripts/postman/resolve-specs.mjs
+
+  lint-specs:
+    needs: resolve-specs
+    if: needs.resolve-specs.outputs.has-specs == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix: ${{ fromJSON(needs.resolve-specs.outputs.spec-matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: existing
+        name: Resolve Workspace Context
+        run: >
+          node scripts/postman/lookup-spec-state.mjs
+          --manifest .postman/spec-hub-manifest.json
+          --spec-path "${{ matrix.specPath }}"
+
+      - name: Ensure Workspace ID Is Available
+        env:
+          SPEC_PATH: ${{ matrix.specPath }}
+          WORKSPACE_ID: ${{ steps.existing.outputs.workspace_id || env.POSTMAN_SHARED_WORKSPACE_ID }}
+        run: |
+          if [ -z "${WORKSPACE_ID}" ]; then
+            echo "No shared workspace ID is available for ${SPEC_PATH}."
+            exit 1
+          fi
+
+      - name: Run Governance Lint
+        uses: postmanlabs/postman-cli-action@v1
+        with:
+          command: >-
+            spec lint ${{ matrix.specPath }}
+            --workspace-id ${{ steps.existing.outputs.workspace_id || env.POSTMAN_SHARED_WORKSPACE_ID }}
+            --fail-severity error
+          api-key: ${{ secrets.POSTMAN_API_KEY }}
+
+  pr-lint-gate:
+    name: PR Lint Gate
+    needs:
+      - resolve-specs
+      - lint-specs
+    if: always() && needs.resolve-specs.outputs.has-specs == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enforce lint results
+        run: |
+          if [ "${{ needs.lint-specs.result }}" != "success" ]; then
+            echo "PR spec lint failed or was cancelled."
+            exit 1
+          fi
