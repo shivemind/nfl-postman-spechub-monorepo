@@ -7,7 +7,7 @@ All APIs, domains, and identifiers are illustrative only. The sample specs use `
 ## Customer Delivery Snapshot
 
 - 13 OpenAPI specs in one monorepo, including one 250-endpoint scale-test spec
-- one GitHub Actions pipeline for shared-mode production syncs and fresh-run preview workspaces
+- one PR-only governance lint workflow plus one GitHub Actions sync pipeline that raises generated-state PRs for shared-mode production runs and supports fresh-run previews
 - explicit Postman CLI governance checks with `postman spec lint`
 - explicit Postman CLI smoke and contract execution with `postman collection run`
 - repo-native Postman export state under `postman/<project>/...`
@@ -51,12 +51,13 @@ All APIs, domains, and identifiers are illustrative only. The sample specs use `
 
 ## NFL Spec Hub Automation
 
-This repo includes [`nfl-postman-spechub.yml`](.github/workflows/nfl-postman-spechub.yml), which implements an NFL-oriented monorepo pipeline for Postman Spec Hub. It uses a small set of helper scripts in [`scripts/postman`](scripts/postman) plus pinned Postman actions to keep the workflow deterministic and customer-reviewable.
+This repo includes [`nfl-postman-spechub.yml`](.github/workflows/nfl-postman-spechub.yml) for full shared-mode and fresh-run syncs plus [`nfl-postman-pr-lint.yml`](.github/workflows/nfl-postman-pr-lint.yml) for pull-request lint gates. Both use a small set of helper scripts in [`scripts/postman`](scripts/postman) plus pinned Postman actions to keep the workflow deterministic and customer-reviewable.
 
 Validated shape for this repo:
 
 - 13 OpenAPI specs in one GitHub monorepo
 - one synthetic 250-endpoint scale-test spec
+- pull-request lint-only governance gate for feature branches targeting `main`
 - fan-out into one Postman workspace in shared mode
 - single-spec manual sync via `workflow_dispatch`
 - repo-side Postman export under `postman/<project>/...`
@@ -101,12 +102,12 @@ The pipeline now supports two workspace lifecycle strategies:
 
 | Strategy | How to enable | What it does | Best for |
 | --- | --- | --- | --- |
-| `shared` | Default. Also set `POSTMAN_WORKSPACE_STRATEGY=shared`. | Reconciles one canonical Postman workspace across runs. Uses the committed manifest to skip unchanged specs and preserve stable Postman IDs. | Production catalog sync, stable CI/CD, true no-op reruns |
+| `shared` | Default. Also set `POSTMAN_WORKSPACE_STRATEGY=shared`. | Reconciles one canonical Postman workspace across runs. Uses the committed manifest to skip unchanged specs and preserve stable Postman IDs, then opens or updates a generated-state PR when repo-side exports change. | Production catalog sync, stable CI/CD, protected-branch-friendly reruns |
 | `fresh-run` | Set `POSTMAN_WORKSPACE_STRATEGY=fresh-run` or choose it in `workflow_dispatch`. | Provisions a brand new Postman workspace for that run, then fans all specs from the monorepo into that fresh workspace while keeping the committed shared manifest and export tree unchanged. | Preview runs, demos, isolated snapshots, clean-room validation |
 
 Important tradeoff:
 
-- `shared` mode is the idempotent production mode. If nothing changed, the rerun becomes a no-op and `finalize-manifest` exits without a commit.
+- `shared` mode is the idempotent production mode. If nothing changed, the rerun becomes a no-op and `finalize-manifest` exits without creating or updating an export PR.
 - `fresh-run` mode is deterministic, but not a no-op at the Postman cloud layer because every run intentionally creates a new workspace and therefore new Postman asset IDs.
 - `fresh-run` uploads generated state and export bundles as workflow artifacts, but it intentionally does not overwrite the committed shared manifest or `postman/` export tree.
 
@@ -117,7 +118,7 @@ In `shared` mode, idempotency comes from the committed manifest in [`spec-hub-ma
 - Each spec is fingerprinted with `specSha256`.
 - The manifest stores the last known `workspaceId`, `specId`, collection IDs, environment UIDs, mock URL, and monitor ID.
 - If a spec hash and all required Postman IDs already match, the workflow skips expensive bootstrap and repo-sync work for that spec.
-- `finalize-manifest` only commits when stable repo-side Postman state actually changed.
+- `finalize-manifest` only refreshes the generated-state PR when stable repo-side Postman state actually changed.
 
 In `fresh-run` mode, the workflow ignores committed cloud IDs on purpose and provisions a brand new workspace for the run. The generated state stays in workflow artifacts so the canonical shared-mode manifest is not polluted with ephemeral preview workspace IDs.
 
@@ -160,8 +161,8 @@ flowchart TD
     Y --> Z["Merge state artifacts into `.postman/spec-hub-manifest.json`"]
     Z --> AA["Render `.postman/resources.yaml`, `.postman/workflows.yaml`, and `postman/<project>/...`"]
     AA --> AB{"Stable repo-side state changed?"}
-    AB -->|Yes| AC["Commit refreshed Postman export state"]
-    AB -->|No| AD["Exit cleanly with no commit"]
+    AB -->|Yes| AC["Push dedicated export branch<br/>and open or update PR"]
+    AB -->|No| AD["Exit cleanly with no export PR"]
 ```
 
 ### What Happens In The Pipeline
@@ -178,7 +179,7 @@ flowchart TD
    - one mock
    - one smoke monitor
    - one repo-side export tree under `postman/<project>/...`
-5. In `shared` mode, `finalize-manifest` merges state and exports back into the repo and only commits stable state changes. In `fresh-run` mode, the workflow keeps the generated bundles as artifacts and leaves committed repo state untouched.
+5. In `shared` mode, `finalize-manifest` merges state and exports back into the repo, pushes those generated files to a dedicated automation branch, and opens or updates a PR with stable state changes. In `fresh-run` mode, the workflow keeps the generated bundles as artifacts and leaves committed repo state untouched.
 
 ### Native Git Integration
 
@@ -232,13 +233,17 @@ The CLI enforces the rules; the pinned `postman-cs` actions handle workspace pla
 3. Configure the repository variables for workspace strategy, governance mapping, environments, runtime URLs, and monitoring.
 4. Run one `fresh-run` dispatch to validate workspace creation, governance linting, smoke tests, and contract tests in isolation.
 5. Switch to `shared` mode for the long-lived NFL production workspace.
-6. Review the generated `postman/<project>/...` export tree and the rendered `.postman` files as the repo-side system of record.
+6. Protect `main` with the PR lint gate once the repo variables and secrets are in place:
+   - require the `PR Lint Gate` check for pull requests to `main`
+   - let the sync workflow publish generated export changes through its dedicated automation PR branch instead of pushing directly to `main`
+7. Review the generated `postman/<project>/...` export tree and the rendered `.postman` files as the repo-side system of record.
 
 ### Customer Setup
 
 1. Keep each OpenAPI spec under `openapi/**` so the resolver can discover it automatically.
 2. Commit the workflow and helper scripts from this repo:
    - [`nfl-postman-spechub.yml`](.github/workflows/nfl-postman-spechub.yml)
+   - [`nfl-postman-pr-lint.yml`](.github/workflows/nfl-postman-pr-lint.yml)
    - [`scripts/postman`](scripts/postman)
 3. Add required GitHub secrets:
    - `POSTMAN_API_KEY`
@@ -260,6 +265,7 @@ The CLI enforces the rules; the pinned `postman-cs` actions handle workspace pla
    - `POSTMAN_SHARED_WORKSPACE_ID` for preexisting shared mode workspaces
    - `POSTMAN_WORKSPACE_TEAM_ID` for org-mode workspace creation
    - `POSTMAN_TEAM_ID` for explicit Bifrost team header overrides
+   - `POSTMAN_EXPORT_PR_BRANCH` to override the generated-state automation branch name
 6. Decide the workspace operating model:
    - use `shared` for the NFL production catalog and idempotent reruns
    - use `fresh-run` for isolated monorepo snapshot workspaces
@@ -271,7 +277,8 @@ The CLI enforces the rules; the pinned `postman-cs` actions handle workspace pla
    - `POSTMAN_INSIGHTS_CLUSTER_NAME=<cluster-name>`
    - keep `POSTMAN_SYSTEM_ENV_MAP_JSON` current so the workflow can pass the correct `system-environment-id` into Insights onboarding
    - manual system-environment linking alone is not enough for Insights discovery; the target service still needs live deploy traffic and a discoverable Insights agent path
-9. Push to `main` for a full monorepo sync, or use `workflow_dispatch` with `spec_path` for a single-spec sync.
+9. Open a pull request against `main` to run the lint-only governance gate.
+10. Merge to `main` for a full monorepo sync, or use `workflow_dispatch` with `spec_path` for a single-spec sync.
 
 ### Required Secrets
 
